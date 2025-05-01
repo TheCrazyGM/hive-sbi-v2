@@ -171,7 +171,7 @@ def run():
             cnt += 1
             try:
                 c = Comment(authorperm, use_tags_api=True, steem_instance=stm)
-            except Exception as e:
+            except Exception:
                 c = None
                 stm.rpc.next()
         if c is None:
