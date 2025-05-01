@@ -170,7 +170,7 @@ def run():
 
         print("Fetch new account history ops.")
 
-        blockchain = Blockchain(steem_instance=stm)
+        Blockchain(steem_instance=stm)
 
         accountTrx = {}
         for account in accounts:

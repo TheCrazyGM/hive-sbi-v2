@@ -63,8 +63,8 @@ def memo_sp_delegation(
             memo_text = transferMemos["sp_delegation"]["memo"]
         memo_transfer_acc.transfer(sponsor, 0.001, STEEM_symbol, memo=memo_text)
         sleep(4)
-    except:
-        print("Could not sent 0.001 %s to %s" % (STEEM_symbol, sponsor))
+    except Exception as e:
+        print(f"Could not sent 0.001 {STEEM_symbol} to {sponsor}: {str(e)}")
 
 
 def memo_welcome(transferMemos, memo_transfer_acc, sponsor, STEEM_symbol="STEEM"):
@@ -79,8 +79,8 @@ def memo_welcome(transferMemos, memo_transfer_acc, sponsor, STEEM_symbol="STEEM"
         memo_text = transferMemos["welcome"]["memo"]
         memo_transfer_acc.transfer(sponsor, 0.001, STEEM_symbol, memo=memo_text)
         sleep(4)
-    except:
-        print("Could not sent 0.001 %s to %s" % (STEEM_symbol, sponsor))
+    except Exception as e:
+        print(f"Could not sent 0.001 {STEEM_symbol} to {sponsor}: {str(e)}")
 
 
 def memo_sponsoring(transferMemos, memo_transfer_acc, s, sponsor, STEEM_symbol="STEEM"):
@@ -97,8 +97,8 @@ def memo_sponsoring(transferMemos, memo_transfer_acc, s, sponsor, STEEM_symbol="
             memo_text = transferMemos["sponsoring"]["memo"]
         memo_transfer_acc.transfer(s, 0.001, STEEM_symbol, memo=memo_text)
         sleep(4)
-    except:
-        print("Could not sent 0.001 %s to %s" % (STEEM_symbol, s))
+    except Exception as e:
+        print(f"Could not sent 0.001 {STEEM_symbol} to {s}: {str(e)}")
 
 
 def memo_update_shares(
@@ -117,8 +117,8 @@ def memo_update_shares(
             memo_text = transferMemos["update_shares"]["memo"]
         memo_transfer_acc.transfer(sponsor, 0.001, STEEM_symbol, memo=memo_text)
         sleep(4)
-    except:
-        print("Could not sent 0.001 %s to %s" % (STEEM_symbol, sponsor))
+    except Exception as e:
+        print(f"Could not sent 0.001 {STEEM_symbol} to {sponsor}: {str(e)}")
 
 
 def memo_sponsoring_update_shares(
@@ -153,8 +153,8 @@ def memo_sponsoring_update_shares(
             memo_text = transferMemos["sponsoring_update_shares"]["memo"]
         memo_transfer_acc.transfer(s, 0.001, STEEM_symbol, memo=memo_text)
         sleep(4)
-    except:
-        print("Could not sent 0.001 %s to %s" % (STEEM_symbol, s))
+    except Exception as e:
+        print(f"Could not sent 0.001 {STEEM_symbol} to {s}: {str(e)}")
 
 
 def run():
@@ -270,11 +270,8 @@ def run():
         if memo_transfer_acc is not None:
             try:
                 memo_transfer_acc = Account(memo_transfer_acc, steem_instance=stm)
-            except:
-                print(
-                    "%s is not a valid steem account! Will be able to send transfer memos..."
-                    % memo_transfer_acc
-                )
+            except Exception as e:
+                print(f"{memo_transfer_acc} is not a valid steem account! Will be able to send transfer memos...: {str(e)}")
 
         member_data = {}
         n_records = 0
@@ -375,7 +372,7 @@ def run():
                     sponsor = op["sponsor"]
                     try:
                         sponsee = json.loads(op["sponsee"].replace('""', '"'))
-                    except:
+                    except Exception:
                         continue
                     shares = op["shares"]
                     share_age = 0

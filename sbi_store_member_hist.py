@@ -83,8 +83,8 @@ def run():
     # nodes.update_nodes(weights={"hist": 1})
     try:
         nodes.update_nodes()
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {str(e)}")
 
     node_list = nodes.get_nodes(hive=hive_blockchain)
     stm = Steem(node=node_list, num_retries=3, timeout=10)
@@ -172,7 +172,7 @@ def run():
             try:
                 c = Comment(op, use_tags_api=True, steem_instance=stm)
                 c.refresh()
-            except:
+            except Exception:
                 continue
             main_post = c.is_main_post()
             comment_cnt += 1
@@ -219,7 +219,7 @@ def run():
                         performance = float(curation_SBD) / vote_SBD * 100
                     else:
                         performance = 0
-                except:
+                except Exception:
                     performance = 0
                     curation_rewards_SBD = None
 

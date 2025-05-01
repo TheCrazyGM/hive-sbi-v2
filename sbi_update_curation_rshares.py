@@ -61,14 +61,14 @@ def update_account(account, new_paid_post, new_paid_comment):
         try:
             comment = json.loads(op["op_dict"])
             created = formatTimeString(comment["timestamp"])
-        except:
+        except Exception:
             op_dict = op["op_dict"]
             comment = json.loads(op_dict[: op_dict.find("body") - 3] + "}")
         try:
             comment = Comment(comment, steem_instance=stm)
             comment.refresh()
             created = comment["created"]
-        except:
+        except Exception:
             continue
         if comment.is_pending():
             continue

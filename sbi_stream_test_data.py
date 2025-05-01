@@ -51,8 +51,8 @@ if __name__ == "__main__":
     nodes = NodeList()
     try:
         nodes.update_nodes(weights={"hist": 1})
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {str(e)}")
     stm = Steem(node=nodes.get_nodes())
     print(str(stm))
     set_shared_steem_instance(stm)

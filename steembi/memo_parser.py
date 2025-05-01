@@ -88,8 +88,8 @@ class MemoParser(object):
                         account_name = account_name.strip()
                         acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
-                    except:
-                        print(account_name + " is not an account")
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
                         account_error = True
                 elif len(w.split(":")) == 2 and "/" not in w:
                     try:
@@ -116,8 +116,8 @@ class MemoParser(object):
                             sponsor = account_name1
                         else:
                             account_error = True
-                    except:
-                        print(account_name + " is not an account")
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
                         account_error = True
                 elif w[0] == "@":
                     try:
@@ -136,8 +136,8 @@ class MemoParser(object):
                         acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
 
-                    except:
-                        print(account_name + " is not an account")
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
                         account_error = True
                 elif len(w.split("@")) > 1:
                     try:
@@ -159,8 +159,8 @@ class MemoParser(object):
                         acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
 
-                    except:
-                        print(account_name + " is not an account")
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
                         account_error = True
 
                 elif len(w) > 16:
@@ -180,8 +180,8 @@ class MemoParser(object):
                         account_name = account_name.strip()
                         acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
-                    except:
-                        print(account_name + " is not an account")
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
                         not_parsed_words.append(w)
                         word_count += 1
                         account_error = True
@@ -218,9 +218,9 @@ class MemoParser(object):
                 if account_name != account:
                     sponsors[account_name] = 1
                     amount_left -= 1
-            except:
+            except Exception as e:
                 account_error = True
-                print(account_name + " is not an account")
+                print(f"{account_name} is not an account: {e}")
         if len(sponsors) == 1 and shares > 1 and no_numbers:
             for a in sponsors:
                 sponsors[a] = shares

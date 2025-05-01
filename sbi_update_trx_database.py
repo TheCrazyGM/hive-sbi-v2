@@ -31,8 +31,8 @@ if __name__ == "__main__":
     nodes = NodeList()
     try:
         nodes.update_nodes()
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {e}")
     stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
     data = trxStorage.get_all_data()
     status = {}
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     print("shares: %d" % shares)
     print("status:")
     for s in status:
-        print("%d status entries with %s" % (status[s], s))
+        print(f"{status[s]} status entries with {s}")
     print("share_types:")
     for s in share_type:
-        print("%d share_type entries with %s" % (share_type[s], s))
+        print(f"{share_type[s]} share_type entries with {s}")

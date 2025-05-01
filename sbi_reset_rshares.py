@@ -138,7 +138,7 @@ def run():
                         continue
                     try:
                         c = Comment(op["memo"], steem_instance=stm)
-                    except:
+                    except Exception:
                         continue
                     if c["author"] not in accounts:
                         continue
@@ -185,7 +185,7 @@ def run():
                         cnt2 += 1
                     try:
                         c = Comment(authorperm, steem_instance=stm)
-                    except:
+                    except Exception:
                         continue
                     cnt3 = 0
                     for vote in c["active_votes"]:
@@ -297,7 +297,7 @@ def run():
 
                                 if not vote_did_sign:
                                     continue
-                            except:
+                            except Exception:
                                 continue
 
                         if c.is_main_post():

@@ -91,8 +91,8 @@ def run():
     # nodes.update_nodes(weights={"block": 1})
     try:
         nodes.update_nodes()
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {e}")
 
     keys = []
     for acc in accounts:
@@ -171,11 +171,11 @@ def run():
             cnt += 1
             try:
                 c = Comment(authorperm, use_tags_api=True, steem_instance=stm)
-            except:
+            except Exception as e:
                 c = None
                 stm.rpc.next()
         if c is None:
-            print("Error getting %s" % authorperm)
+            print(f"Error getting {authorperm}")
             continue
         main_post = c.is_main_post()
         already_voted = False
@@ -194,7 +194,7 @@ def run():
                     else:
                         voted_after = 300
 
-                except:
+                except Exception:
                     voted_after = 300
         if already_voted:
             postTrx.update_voted(author, created, already_voted, voted_after)

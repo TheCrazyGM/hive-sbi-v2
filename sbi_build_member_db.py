@@ -48,8 +48,8 @@ if __name__ == "__main__":
     nodes = NodeList()
     try:
         nodes.update_nodes()
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {str(e)}")
     stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
     data = trxStorage.get_all_data()
     status = {}

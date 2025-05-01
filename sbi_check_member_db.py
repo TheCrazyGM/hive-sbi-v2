@@ -35,8 +35,8 @@ if __name__ == "__main__":
     nodes = NodeList()
     try:
         nodes.update_nodes()
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {str(e)}")
     stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
 
     # Update current node list from @fullnodeupdate
@@ -58,13 +58,13 @@ if __name__ == "__main__":
                 continue
             cnt += 1
             if cnt % 100 == 0:
-                print("%d/%d scanned" % ())
+                print("%d/%d scanned" % (cnt, len(member_accounts)))
             try:
                 acc = Account(m, steem_instance=stm)
             except KeyboardInterrupt:
                 aborted = True
-            except:
-                print("%s is not a valid account" % m)
+            except Exception as e:
+                print(f"{m} is not a valid account: {str(e)}")
                 missing_accounts.append(m)
 
     shares = 0

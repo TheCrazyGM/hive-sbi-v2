@@ -119,17 +119,6 @@ class TrxDB(object):
         )
         table.update(data, ["index", "source"])
 
-    def update_sponsee(self, source, account, memo, sponsee, status):
-        """Change share_age depending on timestamp"""
-        table = self.db[self.__tablename__]
-        found_trx = None
-        for trx in table.find(source=source, account=account, memo=memo):
-            found_trx = trx
-        data = dict(
-            index=found_trx["index"], source=source, sponsee=sponsee, status=status
-        )
-        table.update(data, ["index", "source"])
-
     def update_sponsee_index(self, index, source, sponsee, status):
         """Change share_age depending on timestamp"""
         table = self.db[self.__tablename__]

@@ -122,7 +122,7 @@ if __name__ == "__main__":
                         continue
                     try:
                         c = Comment(op["memo"], steem_instance=stm)
-                    except:
+                    except Exception:
                         continue
                     if c["author"] not in accounts:
                         continue
@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
                                 if not vote_did_sign:
                                     continue
-                            except:
+                            except Exception:
                                 continue
                         if vote_did_sign:
                             continue

@@ -115,8 +115,8 @@ def run():
     # nodes.update_nodes(weights={"block": 1})
     try:
         nodes.update_nodes()
-    except:
-        print("could not update nodes")
+    except Exception as e:
+        print(f"could not update nodes: {str(e)}")
 
     keys = []
     account_list = []
@@ -199,7 +199,7 @@ def run():
             cnt += 1
             try:
                 c = Comment(authorperm, use_tags_api=use_tags_api, steem_instance=stm)
-            except:
+            except Exception:
                 c = None
                 use_tags_api = False
                 continue
@@ -322,7 +322,7 @@ def run():
                     )
                     # c.reply(reply_body, author=account_name)
                     time.sleep(4)
-                except:
+                except Exception:
                     continue
 
         already_voted = False
@@ -348,7 +348,7 @@ def run():
         if isinstance(json_metadata, str):
             try:
                 json_metadata = json.loads(json_metadata)
-            except:
+            except Exception:
                 json_metadata = {}
         if "app" in json_metadata:
             app = json_metadata["app"]
