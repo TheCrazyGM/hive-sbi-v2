@@ -1,25 +1,30 @@
-from beem.account import Account
-from beem.comment import Comment
-from beem.vote import ActiveVotes
-from beem.amount import Amount
-from beem import Steem
-from beem.instance import set_shared_steem_instance
-from beem.nodelist import NodeList
-from beem.memo import Memo
-from beem.utils import addTzInfo, resolve_authorperm, formatTimeString, construct_authorperm
-from datetime import datetime, timedelta
-import requests
-import re
 import json
 import os
 import time
-from time import sleep
+from datetime import datetime, timedelta
+
 import dataset
-from steembi.parse_hist_op import ParseAccountHist
-from steembi.storage import TrxDB, MemberDB, ConfigurationDB, KeysDB, TransactionMemoDB, AccountsDB, TransferMemoDB
-from steembi.transfer_ops_storage import TransferTrx, AccountTrx, MemberHistDB
-from steembi.memo_parser import MemoParser
+from beem import Steem
+from beem.account import Account
+from beem.comment import Comment
+from beem.nodelist import NodeList
+from beem.utils import (
+    addTzInfo,
+    formatTimeString,
+)
+from beem.vote import ActiveVotes
+
 from steembi.member import Member
+from steembi.storage import (
+    AccountsDB,
+    ConfigurationDB,
+    KeysDB,
+    MemberDB,
+    TransactionMemoDB,
+    TransferMemoDB,
+    TrxDB,
+)
+from steembi.transfer_ops_storage import AccountTrx, TransferTrx
 
 
 def increment_rshares(member_data, vote, rshares):
@@ -43,18 +48,22 @@ def update_account(account, new_paid_post, new_paid_comment):
     else:
         oldest_timestamp = last_paid_comment
     if account["name"] == "steembasicincome":
-        ops = accountTrx["sbi"].get_newest(oldest_timestamp, op_types=["comment"], limit=500)
+        ops = accountTrx["sbi"].get_newest(
+            oldest_timestamp, op_types=["comment"], limit=500
+        )
     else:
-        ops = accountTrx[account["name"]].get_newest(oldest_timestamp, op_types=["comment"], limit=50)
+        ops = accountTrx[account["name"]].get_newest(
+            oldest_timestamp, op_types=["comment"], limit=50
+        )
     blog = []
     posts = []
     for op in ops[::-1]:
         try:
-            comment = (json.loads(op["op_dict"]))
+            comment = json.loads(op["op_dict"])
             created = formatTimeString(comment["timestamp"])
         except:
             op_dict = op["op_dict"]
-            comment = json.loads(op_dict[:op_dict.find("body") - 3] + '}')
+            comment = json.loads(op_dict[: op_dict.find("body") - 3] + "}")
         try:
             comment = Comment(comment, steem_instance=stm)
             comment.refresh()
@@ -90,7 +99,9 @@ def update_account(account, new_paid_post, new_paid_comment):
                     if rshares < rshares_per_cycle:
                         rshares = rshares_per_cycle
                 else:
-                    rshares = vote["rshares"] * upvote_multiplier * upvote_multiplier_adjusted
+                    rshares = (
+                        vote["rshares"] * upvote_multiplier * upvote_multiplier_adjusted
+                    )
 
                 increment_rshares(member_data, vote, rshares)
                 post_rshares += rshares
@@ -120,8 +131,9 @@ def update_account(account, new_paid_post, new_paid_comment):
 
     return accounts_data
 
+
 def run():
-    config_file = 'config.json'
+    config_file = "config.json"
     if not os.path.isfile(config_file):
         raise Exception("config.json is missing!")
     else:
@@ -174,14 +186,22 @@ def run():
         else:
             accountTrx[account] = AccountTrx(db, account)
 
-    print("sbi_update_curation_rshares: last_cycle: %s - %.2f min" % (
-        formatTimeString(last_cycle), (datetime.utcnow() - last_cycle).total_seconds() / 60))
-    print("last_paid_post: %s - last_paid_comment: %s" % (
-        formatTimeString(last_paid_post), formatTimeString(last_paid_comment)))
+    print(
+        "sbi_update_curation_rshares: last_cycle: %s - %.2f min"
+        % (
+            formatTimeString(last_cycle),
+            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+        )
+    )
+    print(
+        "last_paid_post: %s - last_paid_comment: %s"
+        % (formatTimeString(last_paid_post), formatTimeString(last_paid_comment))
+    )
 
     if (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min:
-
-        new_cycle = (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min
+        new_cycle = (
+            datetime.utcnow() - last_cycle
+        ).total_seconds() > 60 * share_cycle_min
         current_cycle = last_cycle + timedelta(seconds=60 * share_cycle_min)
 
         print("Update member database, new cycle: %s" % str(new_cycle))

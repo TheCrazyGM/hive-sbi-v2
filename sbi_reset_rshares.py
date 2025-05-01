@@ -1,29 +1,31 @@
-from beem.account import Account
-from beem.amount import Amount
+import json
+import os
+from datetime import datetime, timedelta
+
+import dataset
 from beem import Steem
-from beem.instance import set_shared_steem_instance
-from beem.nodelist import NodeList
-from beem.utils import addTzInfo, resolve_authorperm, formatTimeString, construct_authorperm
-from beem.vote import AccountVotes
-from beem.comment import Comment
+from beem.account import Account
 from beem.block import Block
 from beem.blockchain import Blockchain
+from beem.comment import Comment
+from beem.nodelist import NodeList
+from beem.utils import (
+    addTzInfo,
+    construct_authorperm,
+    formatTimeString,
+)
+from beem.vote import AccountVotes
 from beem.wallet import Wallet
 from beembase.signedtransactions import Signed_Transaction
 from beemgraphenebase.base58 import Base58
-from datetime import datetime, timedelta
-import re
-import json
-import os
-from time import sleep
-import dataset
-from steembi.parse_hist_op import ParseAccountHist
-from steembi.storage import TrxDB, MemberDB, ConfigurationDB
-from steembi.transfer_ops_storage import TransferTrx, AccountTrx, MemberHistDB
+
 from steembi.member import Member
+from steembi.storage import ConfigurationDB, MemberDB, TrxDB
+from steembi.transfer_ops_storage import AccountTrx, MemberHistDB, TransferTrx
+
 
 def run():
-    config_file = 'config.json'
+    config_file = "config.json"
     if not os.path.isfile(config_file):
         raise Exception("config.json is missing!")
     else:
@@ -37,7 +39,6 @@ def run():
         mgnt_shares = config_data["mgnt_shares"]
         hive_blockchain = config_data["hive_blockchain"]
 
-
     db2 = dataset.connect(databaseConnector2)
     db = dataset.connect(databaseConnector)
     transferStorage = TransferTrx(db)
@@ -46,8 +47,6 @@ def run():
     memberStorage = MemberDB(db2)
     accountStorage = MemberHistDB(db)
     confStorage = ConfigurationDB(db2)
-
-
 
     conf_setup = confStorage.get()
 
@@ -59,14 +58,19 @@ def run():
     last_paid_post = conf_setup["last_paid_post"]
     last_paid_comment = conf_setup["last_paid_comment"]
 
-
     minimum_vote_threshold = conf_setup["minimum_vote_threshold"]
     comment_vote_divider = conf_setup["comment_vote_divider"]
     comment_vote_timeout_h = conf_setup["comment_vote_timeout_h"]
 
-    print("last_cycle: %s - %.2f min" % (formatTimeString(last_cycle), (datetime.utcnow() - last_cycle).total_seconds() / 60))
+    print(
+        "last_cycle: %s - %.2f min"
+        % (
+            formatTimeString(last_cycle),
+            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+        )
+    )
     if True:
-        last_cycle = datetime.utcnow() - timedelta(seconds = 60 * 145)
+        last_cycle = datetime.utcnow() - timedelta(seconds=60 * 145)
         confStorage.update({"last_cycle": last_cycle})
         print("update member database")
         # memberStorage.wipe(True)
@@ -83,19 +87,23 @@ def run():
         for m in member_accounts:
             member_data[m] = Member(memberStorage.get(m))
 
-
         print("reset rshares")
         if True:
             for m in member_data:
                 total_share_days = member_data[m]["total_share_days"]
-                member_data[m]["first_cycle_at"] = datetime(1970,1,1,0,0,0)
-                member_data[m]["balance_rshares"] = total_share_days * rshares_per_cycle * 10
-                member_data[m]["earned_rshares"]  = total_share_days * rshares_per_cycle * 10
+                member_data[m]["first_cycle_at"] = datetime(1970, 1, 1, 0, 0, 0)
+                member_data[m]["balance_rshares"] = (
+                    total_share_days * rshares_per_cycle * 10
+                )
+                member_data[m]["earned_rshares"] = (
+                    total_share_days * rshares_per_cycle * 10
+                )
                 member_data[m]["rewarded_rshares"] = 0
-                member_data[m]["subscribed_rshares"] = total_share_days * rshares_per_cycle * 10
+                member_data[m]["subscribed_rshares"] = (
+                    total_share_days * rshares_per_cycle * 10
+                )
                 member_data[m]["delegation_rshares"] = 0
                 member_data[m]["curation_rshares"] = 0
-
 
             for acc_name in accounts:
                 acc = Account(acc_name, steem_instance=stm)
@@ -162,7 +170,10 @@ def run():
                     if cnt % 100 == 0:
                         print("%d/%d" % (cnt, len(comments)))
                     if authorperm in comments_transfer:
-                        print("Will check vote signer %d/%d - %s" % (cnt2, len(comments_transfer), authorperm))
+                        print(
+                            "Will check vote signer %d/%d - %s"
+                            % (cnt2, len(comments_transfer), authorperm)
+                        )
                         if cnt2 % 10 == 0 and cnt2 > 0:
                             print("write member database")
                             memberStorage.db = dataset.connect(databaseConnector2)
@@ -181,30 +192,67 @@ def run():
                         cnt3 += 1
                         if int(vote["rshares"]) == 0:
                             continue
-                        if (addTzInfo(datetime.utcnow()) - (vote["time"])).total_seconds() / 60 / 60 / 24 <= 7:
+                        if (
+                            addTzInfo(datetime.utcnow()) - (vote["time"])
+                        ).total_seconds() / 60 / 60 / 24 <= 7:
                             continue
                         if vote["voter"] not in member_data:
                             continue
-                        if authorperm in comments_transfer and stm.rshares_to_sbd(int(vote["rshares"])) >= 0.05:
+                        if (
+                            authorperm in comments_transfer
+                            and stm.rshares_to_sbd(int(vote["rshares"])) >= 0.05
+                        ):
                             try:
                                 if cnt3 % 10 == 0:
-                                    print("%d/%d votes" % (cnt3, len(c["active_votes"])))
+                                    print(
+                                        "%d/%d votes" % (cnt3, len(c["active_votes"]))
+                                    )
                                 block_num = b.get_estimated_block_num(vote["time"])
                                 current_block_num = b.get_current_block_num()
                                 transaction = None
-                                block_search_list = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5]
+                                block_search_list = [
+                                    0,
+                                    1,
+                                    -1,
+                                    2,
+                                    -2,
+                                    3,
+                                    -3,
+                                    4,
+                                    -4,
+                                    5,
+                                    -5,
+                                ]
                                 block_cnt = 0
-                                while transaction is None and block_cnt < len(block_search_list):
-                                    if block_num + block_search_list[block_cnt] > current_block_num:
+                                while transaction is None and block_cnt < len(
+                                    block_search_list
+                                ):
+                                    if (
+                                        block_num + block_search_list[block_cnt]
+                                        > current_block_num
+                                    ):
                                         block_cnt += 1
                                         continue
-                                    block = Block(block_num + block_search_list[block_cnt], steem_instance=stm)
+                                    block = Block(
+                                        block_num + block_search_list[block_cnt],
+                                        steem_instance=stm,
+                                    )
                                     for tt in block.transactions:
                                         for op in tt["operations"]:
-                                            if isinstance(op, dict) and op["type"][:4] == "vote":
-                                                if op["value"]["voter"] == vote["voter"]:
+                                            if (
+                                                isinstance(op, dict)
+                                                and op["type"][:4] == "vote"
+                                            ):
+                                                if (
+                                                    op["value"]["voter"]
+                                                    == vote["voter"]
+                                                ):
                                                     transaction = tt
-                                            elif isinstance(op, list) and len(op) > 1 and op[0][:4] == "vote":
+                                            elif (
+                                                isinstance(op, list)
+                                                and len(op) > 1
+                                                and op[0][:4] == "vote"
+                                            ):
                                                 if op[1]["voter"] == vote["voter"]:
                                                     transaction = tt
                                     block_cnt += 1
@@ -213,12 +261,21 @@ def run():
                                 if transaction is not None:
                                     signed_tx = Signed_Transaction(transaction)
                                     public_keys = []
-                                    for key in signed_tx.verify(chain=stm.chain_params, recover_parameter=True):
-                                        public_keys.append(format(Base58(key, prefix=stm.prefix), stm.prefix))
+                                    for key in signed_tx.verify(
+                                        chain=stm.chain_params, recover_parameter=True
+                                    ):
+                                        public_keys.append(
+                                            format(
+                                                Base58(key, prefix=stm.prefix),
+                                                stm.prefix,
+                                            )
+                                        )
 
                                     empty_public_keys = []
                                     for key in public_keys:
-                                        pubkey_account = wallet.getAccountFromPublicKey(key)
+                                        pubkey_account = wallet.getAccountFromPublicKey(
+                                            key
+                                        )
                                         if pubkey_account is None:
                                             empty_public_keys.append(key)
                                         else:
@@ -231,7 +288,11 @@ def run():
                                         continue
                                     if a not in ["quarry", "steemdunk"]:
                                         print(a)
-                                    if a in ["smartsteem", "smartmarket", "minnowbooster"]:
+                                    if a in [
+                                        "smartsteem",
+                                        "smartmarket",
+                                        "minnowbooster",
+                                    ]:
                                         vote_did_sign = False
 
                                 if not vote_did_sign:
@@ -256,9 +317,6 @@ def run():
                             member_data[vote["voter"]]["earned_rshares"] += rshares
                             member_data[vote["voter"]]["curation_rshares"] += rshares
                             member_data[vote["voter"]]["balance_rshares"] += rshares
-
-
-
 
         print("write member database")
         memberStorage.db = dataset.connect(databaseConnector2)

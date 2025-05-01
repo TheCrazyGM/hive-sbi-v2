@@ -1,22 +1,24 @@
+import json
+import os
+import time
+from datetime import datetime
+
+import dataset
+from beem import Steem
 from beem.account import Account
 from beem.amount import Amount
-from beem import Steem
-from beem.instance import set_shared_steem_instance
-from beem.nodelist import NodeList
 from beem.blockchain import Blockchain
-from beem.utils import formatTimeString, addTzInfo
-from datetime import datetime
-import re
-import os
-import json
-import time
-from steembi.transfer_ops_storage import TransferTrx, AccountTrx
-from steembi.storage import TrxDB, MemberDB, ConfigurationDB, KeysDB, TransactionMemoDB, AccountsDB
-import dataset
+from beem.nodelist import NodeList
+from beem.utils import formatTimeString
+
+from steembi.storage import (
+    AccountsDB,
+    ConfigurationDB,
+)
+from steembi.transfer_ops_storage import AccountTrx, TransferTrx
 
 
 def get_account_trx_data(account, start_block, start_index):
-
     # Go trough all transfer ops
     if start_block is not None:
         trx_in_block = start_block["trx_in_block"]
@@ -49,7 +51,9 @@ def get_account_trx_data(account, start_block, start_index):
                 if op["trx_in_block"] < trx_in_block:
                     last_trx = op["trx_in_block"]
                     continue
-                if op["op_in_trx"] <= op_in_trx and (trx_in_block != last_trx or last_block == 0):
+                if op["op_in_trx"] <= op_in_trx and (
+                    trx_in_block != last_trx or last_block == 0
+                ):
                     continue
             else:
                 if op["virtual_op"] <= virtual_op and (trx_in_block == last_trx):
@@ -67,10 +71,17 @@ def get_account_trx_data(account, start_block, start_index):
             if trx_in_block > 255:
                 trx_in_block = 0
 
-        d = {"block": op["block"], "op_acc_index": start_index, "op_acc_name": account["name"],
-             "trx_in_block": trx_in_block,
-             "op_in_trx": op_in_trx, "virtual_op": virtual_op, "timestamp": formatTimeString(op["timestamp"]),
-             "type": op["type"], "op_dict": json.dumps(op)}
+        d = {
+            "block": op["block"],
+            "op_acc_index": start_index,
+            "op_acc_name": account["name"],
+            "trx_in_block": trx_in_block,
+            "op_in_trx": op_in_trx,
+            "virtual_op": virtual_op,
+            "timestamp": formatTimeString(op["timestamp"]),
+            "type": op["type"],
+            "op_dict": json.dumps(op),
+        }
         # op_in_trx += 1
         start_index += 1
         last_block = op["block"]
@@ -85,24 +96,36 @@ def get_account_trx_storage_data(account, start_index, stm):
         print("account %s - %d" % (account["name"], start_index))
 
     data = []
-    for op in account.history(start=start_index, use_block_num=False, only_ops=["transfer"]):
+    for op in account.history(
+        start=start_index, use_block_num=False, only_ops=["transfer"]
+    ):
         amount = Amount(op["amount"], steem_instance=stm)
         virtual_op = op["virtual_op"]
         trx_in_block = op["trx_in_block"]
         if virtual_op > 0:
             trx_in_block = -1
         memo = ascii(op["memo"])
-        d = {"block": op["block"], "op_acc_index": op["index"], "op_acc_name": account["name"],
-             "trx_in_block": trx_in_block,
-             "op_in_trx": op["op_in_trx"], "virtual_op": virtual_op,
-             "timestamp": formatTimeString(op["timestamp"]), "from": op["from"], "to": op["to"],
-             "amount": amount.amount, "amount_symbol": amount.symbol, "memo": memo, "op_type": op["type"]}
+        d = {
+            "block": op["block"],
+            "op_acc_index": op["index"],
+            "op_acc_name": account["name"],
+            "trx_in_block": trx_in_block,
+            "op_in_trx": op["op_in_trx"],
+            "virtual_op": virtual_op,
+            "timestamp": formatTimeString(op["timestamp"]),
+            "from": op["from"],
+            "to": op["to"],
+            "amount": amount.amount,
+            "amount_symbol": amount.symbol,
+            "memo": memo,
+            "op_type": op["type"],
+        }
         data.append(d)
     return data
 
 
 def run():
-    config_file = 'config.json'
+    config_file = "config.json"
     if not os.path.isfile(config_file):
         raise Exception("config.json is missing!")
     else:
@@ -126,11 +149,18 @@ def run():
     last_cycle = conf_setup["last_cycle"]
     share_cycle_min = conf_setup["share_cycle_min"]
 
-    print("sbi_store_ops_db: last_cycle: %s - %.2f min" % (
-        formatTimeString(last_cycle), (datetime.utcnow() - last_cycle).total_seconds() / 60))
+    print(
+        "sbi_store_ops_db: last_cycle: %s - %.2f min"
+        % (
+            formatTimeString(last_cycle),
+            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+        )
+    )
 
-    if last_cycle is not None and (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min:
-
+    if (
+        last_cycle is not None
+        and (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min
+    ):
         # Update current node list from @fullnodeupdate
         nodes = NodeList()
         nodes.update_nodes()

@@ -1,25 +1,23 @@
-from beem.account import Account
-from beem.amount import Amount
+import json
+import os
+from datetime import datetime
+
+import dataset
 from beem import Steem
 from beem.instance import set_shared_steem_instance
-from beem.utils import formatTimeString
 from beem.nodelist import NodeList
-import re
-import os
-from time import sleep
-from datetime import datetime
-import json
-import dataset
-from steembi.parse_hist_op import ParseAccountHist
+from beem.utils import formatTimeString
+
+from steembi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
 from steembi.transfer_ops_storage import TransferTrx
-from steembi.storage import TrxDB, MemberDB, ConfigurationDB, AccountsDB
 
 
 def calculate_shares(delegation_shares, sp_share_ratio):
     return int(delegation_shares / sp_share_ratio)
 
+
 def run():
-    config_file = 'config.json'
+    config_file = "config.json"
     if not os.path.isfile(config_file):
         raise Exception("config.json is missing!")
     else:
@@ -30,7 +28,6 @@ def run():
         databaseConnector2 = config_data["databaseConnector2"]
         mgnt_shares = config_data["mgnt_shares"]
         hive_blockchain = config_data["hive_blockchain"]
-
 
     db = dataset.connect(databaseConnector)
     db2 = dataset.connect(databaseConnector2)
@@ -48,11 +45,18 @@ def run():
     rshares_per_cycle = conf_setup["rshares_per_cycle"]
     last_delegation_check = conf_setup["last_delegation_check"]
 
-    print("sbi_check_delegation: last_cycle: %s - %.2f min" % (formatTimeString(last_cycle), (datetime.utcnow() - last_cycle).total_seconds() / 60))
+    print(
+        "sbi_check_delegation: last_cycle: %s - %.2f min"
+        % (
+            formatTimeString(last_cycle),
+            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+        )
+    )
 
-    if last_cycle is not None and  (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min:
-
-
+    if (
+        last_cycle is not None
+        and (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min
+    ):
         nodes = NodeList()
         try:
             nodes.update_nodes()
@@ -60,7 +64,6 @@ def run():
             print("could not update nodes")
         stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
         set_shared_steem_instance(stm)
-
 
         transferStorage = TransferTrx(db)
         trxStorage = TrxDB(db2)
@@ -92,8 +95,11 @@ def run():
             if d["share_type"] == "RemovedDelegation":
                 delegation_list.append(d)
 
-
-        sorted_delegation_list = sorted(delegation_list, key=lambda x: (datetime.utcnow() - x["timestamp"]).total_seconds(), reverse=True)
+        sorted_delegation_list = sorted(
+            delegation_list,
+            key=lambda x: (datetime.utcnow() - x["timestamp"]).total_seconds(),
+            reverse=True,
+        )
 
         for d in sorted_delegation_list:
             if d["share_type"] == "Delegation":
@@ -116,9 +122,15 @@ def run():
         for acc in delegation_account:
             if delegation_account[acc] == 0:
                 continue
-            if last_delegation_check is not None and delegation_timestamp[acc] <= last_delegation_check:
+            if (
+                last_delegation_check is not None
+                and delegation_timestamp[acc] <= last_delegation_check
+            ):
                 continue
-            if last_delegation_check is not None and last_delegation_check < delegation_timestamp[acc]:
+            if (
+                last_delegation_check is not None
+                and last_delegation_check < delegation_timestamp[acc]
+            ):
                 last_delegation_check = delegation_timestamp[acc]
             elif last_delegation_check is None:
                 last_delegation_check = delegation_timestamp[acc]
@@ -132,10 +144,10 @@ def run():
                 trxStorage.update_delegation_shares(account, acc, shares)
                 continue
             delegation_leased[acc] = delegation_account[acc]
-            trxStorage.update_delegation_state(account, acc, "Delegation",
-                                              "DelegationLeased")
+            trxStorage.update_delegation_state(
+                account, acc, "Delegation", "DelegationLeased"
+            )
             print("set delegration from %s to leased" % acc)
-
 
         dd = delegation
         for d in dd:
@@ -146,10 +158,13 @@ def run():
         dd = delegation_shares
         for d in dd:
             sum_sp_shares += dd[d]
-        print("%s: sum %.6f SP - shares %.6f SP - leased %.6f SP" % (account, sum_sp,  sum_sp_shares,  sum_sp_leased))
-
+        print(
+            "%s: sum %.6f SP - shares %.6f SP - leased %.6f SP"
+            % (account, sum_sp, sum_sp_shares, sum_sp_leased)
+        )
 
         confStorage.update({"last_delegation_check": last_delegation_check})
+
 
 if __name__ == "__main__":
     run()

@@ -1,21 +1,15 @@
-from beem.account import Account
-from beem.amount import Amount
-from beem import Steem
-from beem.instance import set_shared_steem_instance
-from beem.nodelist import NodeList
-from beem.utils import formatTimeString
-import re
 import json
 import os
-from time import sleep
-import dataset
-import json
-from steembi.parse_hist_op import ParseAccountHist
-from steembi.storage import TrxDB, MemberDB, ConfigurationDB, AccountsDB
 
+import dataset
+from beem import Steem
+from beem.account import Account
+from beem.nodelist import NodeList
+
+from steembi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
 
 if __name__ == "__main__":
-    config_file = 'config.json'
+    config_file = "config.json"
     if not os.path.isfile(config_file):
         raise Exception("config.json is missing!")
     else:
@@ -31,27 +25,26 @@ if __name__ == "__main__":
     trxStorage = TrxDB(db2)
     memberStorage = MemberDB(db2)
     confStorage = ConfigurationDB(db2)
-    
+
     accStorage = AccountsDB(db2)
     accounts = accStorage.get()
     other_accounts = accStorage.get_transfer()
-    
+
     sp_share_ratio = confStorage.get()["sp_share_ratio"]
-    
+
     nodes = NodeList()
     try:
         nodes.update_nodes()
     except:
-        print("could not update nodes")    
-    stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))    
-
+        print("could not update nodes")
+    stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
 
     # Update current node list from @fullnodeupdate
     print("check member database")
     # memberStorage.wipe(True)
     member_accounts = memberStorage.get_all_accounts()
     data = trxStorage.get_all_data()
-    
+
     missing_accounts = []
     member_data = {}
     aborted = False
@@ -73,8 +66,6 @@ if __name__ == "__main__":
             except:
                 print("%s is not a valid account" % m)
                 missing_accounts.append(m)
-    
-
 
     shares = 0
     bonus_shares = 0
@@ -83,8 +74,7 @@ if __name__ == "__main__":
         shares += member_data[m]["shares"]
         bonus_shares += member_data[m]["bonus_shares"]
         balance_rshares += member_data[m]["balance_rshares"]
-    
-    
+
     print("units: %d" % shares)
     print("bonus units: %d" % bonus_shares)
     print("total units: %d" % (shares + bonus_shares))
@@ -94,4 +84,3 @@ if __name__ == "__main__":
     if len(missing_accounts) > 0:
         print("%d not existing accounts: " % len(missing_accounts))
         print(missing_accounts)
-    
