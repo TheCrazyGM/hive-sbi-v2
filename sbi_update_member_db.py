@@ -1,11 +1,11 @@
 import json
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from time import sleep
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.nodelist import NodeList
 from beem.utils import (
@@ -13,8 +13,8 @@ from beem.utils import (
     formatTimeString,
 )
 
-from steembi.member import Member
-from steembi.storage import (
+from hsbi.member import Member
+from hsbi.storage import (
     AccountsDB,
     ConfigurationDB,
     KeysDB,
@@ -23,7 +23,7 @@ from steembi.storage import (
     TransferMemoDB,
     TrxDB,
 )
-from steembi.transfer_ops_storage import AccountTrx, TransferTrx
+from hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
 
 def memo_sp_delegation(
@@ -215,7 +215,7 @@ def run():
         "sbi_update_member_db: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
         )
     )
     print(
@@ -223,11 +223,11 @@ def run():
         % (formatTimeString(last_paid_post), formatTimeString(last_paid_comment))
     )
     if last_cycle is None:
-        last_cycle = datetime.utcnow() - timedelta(seconds=60 * 145)
+        last_cycle = datetime.now(timezone.utc)() - timedelta(seconds=60 * 145)
         confStorage.update({"last_cycle": last_cycle})
-    elif (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min:
+    elif (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min:
         new_cycle = (
-            datetime.utcnow() - last_cycle
+            datetime.now(timezone.utc)() - last_cycle
         ).total_seconds() > 60 * share_cycle_min
         current_cycle = last_cycle + timedelta(seconds=60 * share_cycle_min)
 
@@ -238,7 +238,7 @@ def run():
 
         data = sorted(
             data,
-            key=lambda x: (datetime.utcnow() - x["timestamp"]).total_seconds(),
+            key=lambda x: (datetime.now(timezone.utc)() - x["timestamp"]).total_seconds(),
             reverse=True,
         )
 
@@ -265,11 +265,11 @@ def run():
         # print(key_list)
         nodes = NodeList()
         nodes.update_nodes()
-        stm = Steem(keys=keys_list, node=nodes.get_nodes(hive=hive_blockchain))
+        hv = Hive(keys=keys_list, node=nodes.get_nodes(hive=hive_blockchain))
 
         if memo_transfer_acc is not None:
             try:
-                memo_transfer_acc = Account(memo_transfer_acc, steem_instance=stm)
+                memo_transfer_acc = Account(memo_transfer_acc, blockchain_instance=hv)
             except Exception as e:
                 print(f"{memo_transfer_acc} is not a valid steem account! Will be able to send transfer memos...: {str(e)}")
 
@@ -330,7 +330,7 @@ def run():
                         # print("del. bonus_shares: %s - %d" % (op["sponsor"], op["shares"]))
                         delegation[op["sponsor"]] = op["shares"]
                     elif op["vests"] > 0 and op["sponsor"] in member_data:
-                        sp = stm.vests_to_sp(float(op["vests"]))
+                        sp = hv.vests_to_sp(float(op["vests"]))
                         delegation[op["sponsor"]] = int(sp / sp_share_ratio)
                     # memo_sp_delegation(transferMemos, memo_transfer_acc, op["sponsor"], delegation[op["sponsor"]], sp_share_ratio)
                     delegation_timestamp[op["sponsor"]] = timestamp
@@ -394,7 +394,7 @@ def run():
                             transferMemos,
                             memo_transfer_acc,
                             sponsor,
-                            STEEM_symbol=stm.steem_symbol,
+                            STEEM_symbol=hv.steem_symbol,
                         )
 
                         member = Member(sponsor, shares, timestamp)
@@ -413,7 +413,7 @@ def run():
                             memo_transfer_acc,
                             sponsor,
                             member_data[sponsor]["shares"],
-                            STEEM_symbol=stm.steem_symbol,
+                            STEEM_symbol=hv.steem_symbol,
                         )
                         member_data[sponsor].append_share_age(timestamp, shares)
 
@@ -428,7 +428,7 @@ def run():
                                 memo_transfer_acc,
                                 s,
                                 sponsor,
-                                STEEM_symbol=stm.steem_symbol,
+                                STEEM_symbol=hv.steem_symbol,
                             )
 
                             member = Member(s, shares, timestamp)
@@ -447,7 +447,7 @@ def run():
                                 s,
                                 sponsor,
                                 member_data[s]["shares"],
-                                STEEM_symbol=stm.steem_symbol,
+                                STEEM_symbol=hv.steem_symbol,
                             )
                             member_data[s].append_share_age(timestamp, shares)
 
@@ -515,7 +515,7 @@ def run():
             % (str(latest_data_timestamp), str(latest_enrollment))
         )
 
-        # date_now = datetime.utcnow()
+        # date_now = datetime.now(timezone.utc)()
         date_now = latest_enrollment
         date_7_before = addTzInfo(date_now - timedelta(seconds=7 * 24 * 60 * 60))
         date_28_before = addTzInfo(date_now - timedelta(seconds=28 * 24 * 60 * 60))

@@ -1,15 +1,15 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dataset
-from beem import Steem
-from beem.instance import set_shared_steem_instance
+from beem import Hive
+from beem.instance import set_shared_blockchain_instance
 from beem.nodelist import NodeList
 from beem.utils import formatTimeString
 
-from steembi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
-from steembi.transfer_ops_storage import TransferTrx
+from hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
+from hsbi.transfer_ops_storage import TransferTrx
 
 
 def calculate_shares(delegation_shares, sp_share_ratio):
@@ -49,21 +49,21 @@ def run():
         "sbi_check_delegation: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
         )
     )
 
     if (
         last_cycle is not None
-        and (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min
+        and (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
         nodes = NodeList()
         try:
             nodes.update_nodes()
         except Exception as e:
             print(f"could not update nodes: {str(e)}")
-        stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
-        set_shared_steem_instance(stm)
+        hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
+        set_shared_blockchain_instance(hv)
 
         transferStorage = TransferTrx(db)
         trxStorage = TrxDB(db2)
@@ -97,13 +97,13 @@ def run():
 
         sorted_delegation_list = sorted(
             delegation_list,
-            key=lambda x: (datetime.utcnow() - x["timestamp"]).total_seconds(),
+            key=lambda x: (datetime.now(timezone.utc)() - x["timestamp"]).total_seconds(),
             reverse=True,
         )
 
         for d in sorted_delegation_list:
             if d["share_type"] == "Delegation":
-                delegation[d["account"]] = stm.vests_to_sp(float(d["vests"]))
+                delegation[d["account"]] = hv.vests_to_sp(float(d["vests"]))
                 delegation_timestamp[d["account"]] = d["timestamp"]
                 delegation_shares[d["account"]] = d["shares"]
             elif d["share_type"] == "DelegationLeased":

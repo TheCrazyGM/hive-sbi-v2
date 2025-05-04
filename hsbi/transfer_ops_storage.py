@@ -1,9 +1,5 @@
-# This Python file uses the following encoding: utf-8
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import logging
-from builtins import object
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import and_
 
@@ -407,7 +403,7 @@ class PostsTrx(object):
         del_posts = []
         for post in table.find(order_by="created"):
             if (
-                datetime.utcnow() - post["created"]
+                datetime.now(timezone.utc)() - post["created"]
             ).total_seconds() > 60 * 60 * 24 * days:
                 del_posts.append({"author": post["author"], "created": post["created"]})
         for post in del_posts:
@@ -574,7 +570,7 @@ class CurationOptimizationTrx(object):
         del_posts = []
         for post in table.find(order_by="created"):
             if (
-                datetime.utcnow() - post["created"]
+                datetime.now(timezone.utc)() - post["created"]
             ).total_seconds() > 60 * 60 * 24 * days:
                 del_posts.append({"member": post["member"], "created": post["created"]})
         for post in del_posts:

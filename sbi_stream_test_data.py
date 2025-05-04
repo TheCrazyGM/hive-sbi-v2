@@ -2,13 +2,13 @@ import json
 import os
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.blockchain import Blockchain
-from beem.instance import set_shared_steem_instance
+from beem.instance import set_shared_blockchain_instance
 from beem.nodelist import NodeList
 
-from steembi.transfer_ops_storage import AccountTrx
+from hsbi.transfer_ops_storage import AccountTrx
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -53,9 +53,9 @@ if __name__ == "__main__":
         nodes.update_nodes(weights={"hist": 1})
     except Exception as e:
         print(f"could not update nodes: {str(e)}")
-    stm = Steem(node=nodes.get_nodes())
-    print(str(stm))
-    set_shared_steem_instance(stm)
+    hv = Hive(node=nodes.get_nodes())
+    print(str(hv))
+    set_shared_blockchain_instance(hv)
 
     blockchain = Blockchain()
 

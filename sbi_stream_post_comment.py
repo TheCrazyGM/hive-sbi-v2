@@ -4,7 +4,7 @@ import random
 import time
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.blockchain import Blockchain
 from beem.comment import Comment
 from beem.nodelist import NodeList
@@ -12,8 +12,8 @@ from beem.utils import (
     construct_authorperm,
 )
 
-from steembi.member import Member
-from steembi.storage import (
+from hsbi.member import Member
+from hsbi.storage import (
     AccountsDB,
     BlacklistDB,
     ConfigurationDB,
@@ -21,8 +21,8 @@ from steembi.storage import (
     MemberDB,
     TrxDB,
 )
-from steembi.transfer_ops_storage import PostsTrx
-from steembi.version import version as sbiversion
+from hsbi.transfer_ops_storage import PostsTrx
+from hsbi.version import version as sbiversion
 
 
 def run():
@@ -128,7 +128,7 @@ def run():
         if k["key_type"] == "posting":
             keys_list.append(k["wif"].replace("\n", "").replace("\r", ""))
     node_list = nodes.get_nodes(hive=hive_blockchain)
-    stm = Steem(
+    hv = Hive(
         node=node_list,
         keys=keys_list,
         num_retries=5,
@@ -137,7 +137,7 @@ def run():
         nobroadcast=nobroadcast,
     )
 
-    b = Blockchain(steem_instance=stm)
+    b = Blockchain(blockchain_instance=hv)
     print("deleting old posts")
     postTrx.delete_old_posts(1)
     # print("reading all authorperm")
@@ -198,7 +198,7 @@ def run():
         while c is None and cnt < 5:
             cnt += 1
             try:
-                c = Comment(authorperm, use_tags_api=use_tags_api, steem_instance=stm)
+                c = Comment(authorperm, use_tags_api=use_tags_api, blockchain_instance=hv)
             except Exception:
                 c = None
                 use_tags_api = False
@@ -235,7 +235,7 @@ def run():
                 )
                 reply_body += "* your rshares balance is %d or %.3f $\n" % (
                     member_data[ops["author"]]["balance_rshares"],
-                    stm.rshares_to_sbd(member_data[ops["author"]]["balance_rshares"]),
+                    hv.rshares_to_sbd(member_data[ops["author"]]["balance_rshares"]),
                 )
                 if member_data[ops["author"]]["comment_upvote"] == 0:
                     rshares = (
@@ -245,14 +245,14 @@ def run():
                     if rshares > minimum_vote_threshold:
                         reply_body += (
                             "* your next SBI upvote is predicted to be %.3f $\n"
-                            % (stm.rshares_to_sbd(rshares))
+                            % (hv.rshares_to_sbd(rshares))
                         )
                     else:
                         reply_body += (
                             "* you need to wait until your upvote value (current value: %.3f $) is above %.3f $\n"
                             % (
-                                stm.rshares_to_sbd(rshares),
-                                stm.rshares_to_sbd(minimum_vote_threshold),
+                                hv.rshares_to_sbd(rshares),
+                                hv.rshares_to_sbd(minimum_vote_threshold),
                             )
                         )
                 else:
@@ -264,19 +264,19 @@ def run():
                     if rshares > minimum_vote_threshold * 20:
                         reply_body += (
                             "* your next SBI upvote is predicted to be %.3f $\n"
-                            % (stm.rshares_to_sbd(int(minimum_vote_threshold * 20)))
+                            % (hv.rshares_to_sbd(int(minimum_vote_threshold * 20)))
                         )
                     elif rshares > minimum_vote_threshold * 2:
                         reply_body += (
                             "* your next SBI upvote is predicted to be %.3f $\n"
-                            % (stm.rshares_to_sbd(rshares))
+                            % (hv.rshares_to_sbd(rshares))
                         )
                     else:
                         reply_body += (
                             "* you need to wait until your upvote value (current value: %.3f $) is above %.3f $\n"
                             % (
-                                stm.rshares_to_sbd(rshares),
-                                stm.rshares_to_sbd(minimum_vote_threshold * 2),
+                                hv.rshares_to_sbd(rshares),
+                                hv.rshares_to_sbd(minimum_vote_threshold * 2),
                             )
                         )
                 if rshares_denom > 0:
@@ -313,7 +313,7 @@ def run():
 
                 account_name = account_list[random.randint(0, len(account_list) - 1)]
                 try:
-                    stm.post(
+                    hv.post(
                         "",
                         reply_body,
                         app="steembasicincome/%s" % sbiversion,

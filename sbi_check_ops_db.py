@@ -3,17 +3,17 @@ import os
 import time
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.amount import Amount
 from beem.blockchain import Blockchain
 from beem.nodelist import NodeList
 from beem.utils import formatTimeString
 
-from steembi.storage import (
+from hsbi.storage import (
     AccountsDB,
 )
-from steembi.transfer_ops_storage import AccountTrx, TransferTrx
+from hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -39,12 +39,12 @@ if __name__ == "__main__":
     nodes = NodeList()
     nodes.update_nodes()
     # nodes.update_nodes(weights={"hist": 1})
-    stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
+    hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
     # print(str(stm))
 
     print("Fetch new account history ops.")
 
-    blockchain = Blockchain(steem_instance=stm)
+    blockchain = Blockchain(blockchain_instance=hv)
 
     accountTrx = {}
     for account in accounts:
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     for account_name in accounts:
         if account_name != "steembasicincome":
             continue
-        account = Account(account_name, steem_instance=stm)
+        account = Account(account_name, blockchain_instance=hv)
 
         # Go trough all transfer ops
         cnt = 0
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     for account_name in accounts:
         if account_name != "steembasicincome":
             continue
-        account = Account(account_name, steem_instance=stm)
+        account = Account(account_name, blockchain_instance=hv)
 
         # Go trough all transfer ops
         cnt = 0
@@ -147,7 +147,7 @@ if __name__ == "__main__":
             continue
         else:
             continue
-        account = Account(account_name, steem_instance=stm)
+        account = Account(account_name, blockchain_instance=hv)
 
         # Go trough all transfer ops
         cnt = 0
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     if not trxStorage.exists_table():
         trxStorage.create_table()
     for account in other_accounts:
-        account = Account(account, steem_instance=stm)
+        account = Account(account, blockchain_instance=hv)
         cnt = 0
 
         start_index = trxStorage.get_latest_index(account["name"])

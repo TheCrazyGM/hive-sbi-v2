@@ -2,10 +2,10 @@ import json
 import os
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.nodelist import NodeList
 
-from steembi.storage import MemberDB, TrxDB
+from hsbi.storage import MemberDB, TrxDB
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         nodes.update_nodes()
     except Exception as e:
         print(f"could not update nodes: {e}")
-    stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
+    hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
     data = trxStorage.get_all_data()
     status = {}
     share_type = {}

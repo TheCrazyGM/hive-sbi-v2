@@ -1,21 +1,21 @@
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.amount import Amount
 from beem.blockchain import Blockchain
 from beem.nodelist import NodeList
 from beem.utils import formatTimeString
 
-from steembi.storage import (
+from hsbi.storage import (
     AccountsDB,
     ConfigurationDB,
 )
-from steembi.transfer_ops_storage import AccountTrx, TransferTrx
+from hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
 
 def get_account_trx_data(account, start_block, start_index):
@@ -90,7 +90,7 @@ def get_account_trx_data(account, start_block, start_index):
     return data
 
 
-def get_account_trx_storage_data(account, start_index, stm):
+def get_account_trx_storage_data(account, start_index, hv):
     if start_index is not None:
         start_index = start_index["op_acc_index"] + 1
         print("account %s - %d" % (account["name"], start_index))
@@ -99,7 +99,7 @@ def get_account_trx_storage_data(account, start_index, stm):
     for op in account.history(
         start=start_index, use_block_num=False, only_ops=["transfer"]
     ):
-        amount = Amount(op["amount"], steem_instance=stm)
+        amount = Amount(op["amount"], blockchain_instance=hv)
         virtual_op = op["virtual_op"]
         trx_in_block = op["trx_in_block"]
         if virtual_op > 0:
@@ -153,24 +153,24 @@ def run():
         "sbi_store_ops_db: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
         )
     )
 
     if (
         last_cycle is not None
-        and (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min
+        and (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
         # Update current node list from @fullnodeupdate
         nodes = NodeList()
         nodes.update_nodes()
         # nodes.update_nodes(weights={"hist": 1})
-        stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
-        print(str(stm))
+        hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
+        print(str(hv))
 
         print("Fetch new account history ops.")
 
-        Blockchain(steem_instance=stm)
+        blockchain= Blockchain(blockchain_instance=hv)
 
         accountTrx = {}
         for account in accounts:
@@ -184,10 +184,10 @@ def run():
 
         for account_name in accounts:
             if account_name == "steembasicincome":
-                account = Account(account_name, steem_instance=stm)
+                account = Account(account_name, blockchain_instance=hv)
                 account_name = "sbi"
             else:
-                account = Account(account_name, steem_instance=stm)
+                account = Account(account_name, blockchain_instance=hv)
             start_block = accountTrx[account_name].get_latest_block()
             start_index = accountTrx[account_name].get_latest_index()
 
@@ -208,10 +208,10 @@ def run():
         trxStorage = TransferTrx(db)
 
         for account in other_accounts:
-            account = Account(account, steem_instance=stm)
+            account = Account(account, blockchain_instance=hv)
             start_index = trxStorage.get_latest_index(account["name"])
 
-            data = get_account_trx_storage_data(account, start_index, stm)
+            data = get_account_trx_storage_data(account, start_index, hv)
 
             data_batch = []
             for cnt in range(0, len(data)):

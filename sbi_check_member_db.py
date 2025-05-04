@@ -2,11 +2,11 @@ import json
 import os
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.nodelist import NodeList
 
-from steembi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
+from hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -37,7 +37,7 @@ if __name__ == "__main__":
         nodes.update_nodes()
     except Exception as e:
         print(f"could not update nodes: {str(e)}")
-    stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
+    hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
 
     # Update current node list from @fullnodeupdate
     print("check member database")
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             if cnt % 100 == 0:
                 print("%d/%d scanned" % (cnt, len(member_accounts)))
             try:
-                acc = Account(m, steem_instance=stm)
+                acc = Account(m, blockchain_instance=hv)
             except KeyboardInterrupt:
                 aborted = True
             except Exception as e:
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     print("total units: %d" % (shares + bonus_shares))
     print("----------")
     print("balance_rshares: %d" % balance_rshares)
-    print("balance_rshares: %.3f $" % stm.rshares_to_sbd(balance_rshares))
+    print("balance_rshares: %.3f $" % hv.rshares_to_sbd(balance_rshares))
     if len(missing_accounts) > 0:
         print("%d not existing accounts: " % len(missing_accounts))
         print(missing_accounts)

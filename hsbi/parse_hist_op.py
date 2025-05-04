@@ -1,21 +1,17 @@
-# This Python file uses the following encoding: utf-8
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 import logging
-from builtins import int, str
 from datetime import datetime
 
 from beem.account import Account
 from beem.amount import Amount
-from beem.instance import shared_steem_instance
+from beem.instance import shared_blockchain_instance
 from beem.memo import Memo
 from beem.utils import (
     addTzInfo,
     formatTimeString,
 )
 
-from steembi.memo_parser import MemoParser
+from hsbi.memo_parser import MemoParser
 
 log = logging.getLogger(__name__)
 
@@ -30,17 +26,17 @@ class ParseAccountHist(list):
         transactionOutStorage,
         member_data,
         memberStorage=None,
-        steem_instance=None,
+        blockchain_instance=None,
     ):
-        self.steem = steem_instance or shared_steem_instance()
-        self.account = Account(account, steem_instance=self.steem)
+        self.steem = blockchain_instance or shared_blockchain_instance()
+        self.account = Account(account, blockchain_instance=self.steem)
         self.delegated_vests_in = {}
         self.delegated_vests_out = {}
         self.timestamp = addTzInfo(datetime(1970, 1, 1, 0, 0, 0, 0))
         self.path = path
         self.member_data = member_data
         self.memberStorage = memberStorage
-        self.memo_parser = MemoParser(steem_instance=self.steem)
+        self.memo_parser = MemoParser(blockchain_instance=self.steem)
         self.excluded_accounts = [
             "minnowbooster",
             "smartsteem",
@@ -161,7 +157,7 @@ class ParseAccountHist(list):
         #    the_file.write(str(delegated_sp_out) + '\n')
 
     def parse_transfer_out_op(self, op):
-        amount = Amount(op["amount"], steem_instance=self.steem)
+        amount = Amount(op["amount"], blockchain_instance=self.steem)
         index = op["index"]
         account = op["from"]
         timestamp = op["timestamp"]
@@ -182,7 +178,7 @@ class ParseAccountHist(list):
                 processed_memo = processed_memo[1:-1]
             elif processed_memo[2] == "#":
                 processed_memo = processed_memo[2:-2]
-            memo = Memo(account, op["to"], steem_instance=self.steem)
+            memo = Memo(account, op["to"], blockchain_instance=self.steem)
             processed_memo = ascii(memo.decrypt(processed_memo)).replace("\n", "")
             encrypted = True
 
@@ -267,7 +263,7 @@ class ParseAccountHist(list):
             return
 
     def parse_transfer_in_op(self, op):
-        amount = Amount(op["amount"], steem_instance=self.steem)
+        amount = Amount(op["amount"], blockchain_instance=self.steem)
         share_type = "Standard"
         index = op["index"]
         account = op["from"]
@@ -289,7 +285,7 @@ class ParseAccountHist(list):
                 processed_memo = processed_memo[1:-1]
             elif processed_memo[2] == "#":
                 processed_memo = processed_memo[2:-2]
-            memo = Memo(account, op["to"], steem_instance=self.steem)
+            memo = Memo(account, op["to"], blockchain_instance=self.steem)
             processed_memo = ascii(memo.decrypt(processed_memo)).replace("\n", "")
 
         shares = int(amount.amount)
@@ -518,7 +514,7 @@ class ParseAccountHist(list):
 
     def parse_op(self, op, parse_vesting=True):
         if op["type"] == "delegate_vesting_shares" and parse_vesting:
-            vests = Amount(op["vesting_shares"], steem_instance=self.steem)
+            vests = Amount(op["vesting_shares"], blockchain_instance=self.steem)
             # print(op)
             if op["delegator"] == self.account["name"]:
                 delegation = {"account": op["delegatee"], "amount": vests}
@@ -530,7 +526,7 @@ class ParseAccountHist(list):
                 return
 
         elif op["type"] == "transfer":
-            amount = Amount(op["amount"], steem_instance=self.steem)
+            amount = Amount(op["amount"], blockchain_instance=self.steem)
             # print(op)
             if (
                 op["from"] == self.account["name"]

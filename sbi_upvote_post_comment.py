@@ -1,18 +1,18 @@
 import json
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.blockchain import Blockchain
 from beem.comment import Comment
 from beem.nodelist import NodeList
 
-from steembi.member import Member
-from steembi.storage import AccountsDB, ConfigurationDB, KeysDB, MemberDB, TrxDB
-from steembi.transfer_ops_storage import PostsTrx
+from hsbi.member import Member
+from hsbi.storage import AccountsDB, ConfigurationDB, KeysDB, MemberDB, TrxDB
+from hsbi.transfer_ops_storage import PostsTrx
 
 
 def run():
@@ -103,7 +103,7 @@ def run():
             keys_list.append(k["wif"].replace("\n", "").replace("\r", ""))
     node_list = nodes.get_nodes(hive=hive_blockchain)
 
-    stm = Steem(
+    hv = Hive(
         node=node_list,
         keys=keys_list,
         num_retries=5,
@@ -114,9 +114,9 @@ def run():
 
     voter_accounts = {}
     for acc in accounts:
-        voter_accounts[acc] = Account(acc, steem_instance=stm)
+        voter_accounts[acc] = Account(acc, blockchain_instance=hv)
 
-    b = Blockchain(steem_instance=stm)
+    b = Blockchain(blockchain_instance=hv)
     # print("reading all authorperm")
     already_voted_posts = []
     flagged_posts = []
@@ -127,7 +127,7 @@ def run():
     # print("prep time took %.2f s" % (time.time() - start_prep_time))
     for authorperm in post_list:
         created = post_list[authorperm]["created"]
-        if (datetime.utcnow() - created).total_seconds() > 1 * 24 * 60 * 60:
+        if (datetime.now(timezone.utc)() - created).total_seconds() > 1 * 24 * 60 * 60:
             continue
         if start_timestamp > created:
             continue
@@ -138,7 +138,7 @@ def run():
             continue
         if (
             post_list[authorperm]["main_post"] == 0
-            and (datetime.utcnow() - created).total_seconds()
+            and (datetime.now(timezone.utc)() - created).total_seconds()
             > comment_vote_timeout_h * 60 * 60
         ):
             postTrx.update_comment_to_old(author, created, True)
@@ -170,10 +170,10 @@ def run():
         while c is None and cnt < 5:
             cnt += 1
             try:
-                c = Comment(authorperm, use_tags_api=True, steem_instance=stm)
+                c = Comment(authorperm, use_tags_api=True, blockchain_instance=hv)
             except Exception:
                 c = None
-                stm.rpc.next()
+                hv.rpc.next()
         if c is None:
             print(f"Error getting {authorperm}")
             continue
@@ -208,7 +208,7 @@ def run():
             continue
         if (
             member["last_received_vote"] is not None
-            and (datetime.utcnow() - member["last_received_vote"]).total_seconds() / 60
+            and (datetime.now(timezone.utc)() - member["last_received_vote"]).total_seconds() / 60
             < 15
         ):
             continue

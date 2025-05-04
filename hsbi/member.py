@@ -1,13 +1,6 @@
-# This Python file uses the following encoding: utf-8
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from builtins import int
-from datetime import datetime
-
-from future.utils import python_2_unicode_compatible
+from datetime import datetime, timezone
 
 
-@python_2_unicode_compatible
 class Member(dict):
     def __init__(self, account, shares=0, timestamp=None):
         if isinstance(account, dict):
@@ -43,7 +36,7 @@ class Member(dict):
     def append_share_age(self, timestamp, shares):
         if shares == 0:
             return
-        age = (datetime.utcnow()) - (timestamp)
+        age = (datetime.now(timezone.utc)) - (timestamp)
         share_age = int(age.total_seconds() / 60 / 60 / 24)
         self.share_age_list.append(share_age)
         self.shares_list.append(shares)
@@ -51,7 +44,6 @@ class Member(dict):
 
     def calc_share_age(self):
         total_share_days = 0
-        sum_days = 0
         if len(self.share_age_list) == 0:
             self["total_share_days"] = total_share_days
             self["avg_share_age"] = total_share_days
@@ -68,7 +60,6 @@ class Member(dict):
         if len(self.share_age_list) == 0:
             return
         total_share_days = 0
-        sum_days = 0
         index = 0
         for i in range(len(self.share_age_list)):
             if self.share_timestamp[i] <= timestamp:

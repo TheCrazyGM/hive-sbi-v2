@@ -2,8 +2,8 @@ from beem.account import Account
 from beem.comment import Comment
 from beem.vote import ActiveVotes
 from beem.amount import Amount
-from beem import Steem
-from beem.instance import set_shared_steem_instance
+from beem import Hive
+from beem.instance import set_shared_blockchain_instance
 from beem.nodelist import NodeList
 from beem.memo import Memo
 from beem.utils import addTzInfo, resolve_authorperm, formatTimeString, construct_authorperm
@@ -15,11 +15,11 @@ import os
 import time
 from time import sleep
 import dataset
-from steembi.parse_hist_op import ParseAccountHist
-from steembi.storage import TrxDB, MemberDB, ConfigurationDB, KeysDB, TransactionMemoDB, AccountsDB
-from steembi.transfer_ops_storage import TransferTrx, AccountTrx, MemberHistDB
-from steembi.memo_parser import MemoParser
-from steembi.member import Member
+from hsbi.parse_hist_op import ParseAccountHist
+from hsbi.storage import TrxDB, MemberDB, ConfigurationDB, KeysDB, TransactionMemoDB, AccountsDB
+from hsbi.transfer_ops_storage import TransferTrx, AccountTrx, MemberHistDB
+from hsbi.memo_parser import MemoParser
+from hsbi.member import Member
 
 
 def memo_sp_delegation(new_shares, sp_per_share):
@@ -100,8 +100,8 @@ if __name__ == "__main__":
             accountTrx[account] = AccountTrx(db, account)    
 
     data = trxStorage.get_all_data()
-    data = sorted(data, key=lambda x: (datetime.utcnow() - x["timestamp"]).total_seconds(), reverse=True)
-    # data = sorted(data, key=lambda x: (datetime.utcnow() - x["timestamp"]).total_seconds(), reverse=True)
+    data = sorted(data, key=lambda x: (datetime.now(timezone.utc)() - x["timestamp"]).total_seconds(), reverse=True)
+    # data = sorted(data, key=lambda x: (datetime.now(timezone.utc)() - x["timestamp"]).total_seconds(), reverse=True)
     key_list = []
     key = keyStorage.get("steembasicincome", "memo")
     if key is not None:
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         nodes.update_nodes()
     except:
         print("could not update nodes")        
-    stm = Steem(keys=key_list, node=nodes.get_nodes(hive=hive_blockchain))
+    hv = Hive(keys=key_list, node=nodes.get_nodes(hive=hive_blockchain))
 
 #    if False: # check if member are blacklisted
 #        member_accounts = memberStorage.get_all_accounts()
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         memberStorage.add_batch(member_data_list)
         member_data_list = []            
     if False: # LessOrNoSponsee
-        memo_parser = MemoParser(steem_instance=stm)            
+        memo_parser = MemoParser(blockchain_instance=hv)            
         for op in data:
             if op["status"] != "LessOrNoSponsee":
                 continue
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     if False: # deal with encrypted memos
         print("check for encrypted memos")
 
-        set_shared_steem_instance(stm)
+        set_shared_blockchain_instance(stm)
         for op in data:
             if op["status"] != "LessOrNoSponsee":
                 continue
@@ -193,7 +193,7 @@ if __name__ == "__main__":
             if len(processed_memo) > 1 and (processed_memo[0] == '#' or processed_memo[1] == '#') and  op["source"] == "steembasicincome":
 
                 print("found: %s" % processed_memo)
-                memo = Memo(op["source"], op["account"], steem_instance=stm)
+                memo = Memo(op["source"], op["account"], blockchain_instance=hv)
                 processed_memo = ascii(memo.decrypt(processed_memo)).replace('\n', '')
                 print("decrypt memo %s" % processed_memo)
                 trxStorage.update_memo(op["source"], op["account"], op["memo"], processed_memo)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             if len(processed_memo) > 1 and (processed_memo[0] == '#' or processed_memo[1] == '#') and  op["to"] == "steembasicincome":
 
                 print("found: %s" % processed_memo)
-                memo = Memo(op["to"], op["sender"], steem_instance=stm)
+                memo = Memo(op["to"], op["sender"], blockchain_instance=hv)
                 dec_memo = memo.decrypt(processed_memo)
                 processed_memo = ascii(dec_memo).replace('\n', '')
                 print("decrypt memo %s" % processed_memo)
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
     if False:  #check when sponsor is different from account
         print('check sponsor accounts')
-        memo_parser = MemoParser(steem_instance=stm)
+        memo_parser = MemoParser(blockchain_instance=hv)
         for op in data:
             if op["status"] != "Valid":
                 continue
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     if False:  #check accountDoesNotExists
         print('check not existing accounts')
 
-        memo_parser = MemoParser(steem_instance=stm)
+        memo_parser = MemoParser(blockchain_instance=hv)
         for op in data:
             if op["status"] != "AccountDoesNotExist":
                 continue
@@ -274,7 +274,7 @@ if __name__ == "__main__":
             if sponsee_amount != op["shares"]:
                 continue
             try:
-                # sponsee = Account(processed_memo[1:], steem_instance=stm)
+                # sponsee = Account(processed_memo[1:], blockchain_instance=hv)
                 # sponsee_dict = json.dumps({sponsee["name"]: op["shares"]})
                 sponsee_dict = json.dumps(sponsee)
                 print(sponsee_dict)
@@ -305,7 +305,7 @@ if __name__ == "__main__":
 
     if False: # fix memos with \n\n
         print('check not existing accounts')
-        memo_parser = MemoParser(steem_instance=stm)
+        memo_parser = MemoParser(blockchain_instance=hv)
         for op in data:
             if op["status"] != "Valid":
                 continue
@@ -328,7 +328,7 @@ if __name__ == "__main__":
             if sponsee_amount != op["shares"]:
                 continue
             try:
-                # sponsee = Account(processed_memo[1:], steem_instance=stm)
+                # sponsee = Account(processed_memo[1:], blockchain_instance=hv)
                 # sponsee_dict = json.dumps({sponsee["name"]: op["shares"]})
                 sponsee_dict = json.dumps(sponsee)
                 print(sponsee_dict)

@@ -42,10 +42,10 @@ def get_long_description():
 
 if __name__ == "__main__":
     # Rewrite the version file everytime
-    write_version_py("steembi/version.py")
+    write_version_py("hsbi/version.py")
 
     setup(
-        name="steembi",
+        name="hsbi",
         version=VERSION,
         description="Steem basic income library",
         long_description=get_long_description(),
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         maintainer_email="holger@nahrstaedt.de",
         url="http://www.github.com/holgern/steembasicincome",
         keywords=["steem", "library", "ubi", "steembasicincome"],
-        packages=["steembi"],
+        packages=["hsbi"],
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Operating System :: OS Independent",

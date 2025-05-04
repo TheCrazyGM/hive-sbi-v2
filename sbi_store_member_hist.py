@@ -1,20 +1,20 @@
 import json
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.blockchain import Blockchain
 from beem.comment import Comment
-from beem.instance import set_shared_steem_instance
+from beem.instance import set_shared_blockchain_instance
 from beem.nodelist import NodeList
 from beem.utils import addTzInfo, construct_authorperm, formatTimeString
 from beem.vote import Vote
 
-from steembi.member import Member
-from steembi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
-from steembi.transfer_ops_storage import (
+from hsbi.member import Member
+from hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
+from hsbi.transfer_ops_storage import (
     CurationOptimizationTrx,
     MemberHistDB,
 )
@@ -87,14 +87,14 @@ def run():
         print(f"could not update nodes: {str(e)}")
 
     node_list = nodes.get_nodes(hive=hive_blockchain)
-    stm = Steem(node=node_list, num_retries=3, timeout=10)
+    hv = Hive(node=node_list, num_retries=3, timeout=10)
     # print(str(stm))
-    set_shared_steem_instance(stm)
+    set_shared_blockchain_instance(hv)
 
     accountTrx = {}
     accountTrx = MemberHistDB(db)
 
-    b = Blockchain(steem_instance=stm)
+    b = Blockchain(blockchain_instance=hv)
     current_block = b.get_current_block()
     stop_time = latest_enrollment
     stop_time = current_block["timestamp"]
@@ -117,7 +117,7 @@ def run():
 
     print("Checking member upvotes from %d to %d" % (start_block, end_block))
 
-    date_now = datetime.utcnow()
+    date_now = datetime.now(timezone.utc)()
     date_7_before = addTzInfo(date_now - timedelta(seconds=7 * 24 * 60 * 60))
     date_28_before = addTzInfo(date_now - timedelta(seconds=28 * 24 * 60 * 60))
     date_72h_before = addTzInfo(date_now - timedelta(seconds=72 * 60 * 60))
@@ -170,7 +170,7 @@ def run():
             if op["author"] not in member_accounts:
                 continue
             try:
-                c = Comment(op, use_tags_api=True, steem_instance=stm)
+                c = Comment(op, use_tags_api=True, blockchain_instance=hv)
                 c.refresh()
             except Exception:
                 continue
@@ -197,7 +197,7 @@ def run():
                 continue
             if op["author"] in member_accounts and op["voter"] in accounts:
                 authorperm = construct_authorperm(op["author"], op["permlink"])
-                vote = Vote(op["voter"], authorperm=authorperm, steem_instance=stm)
+                vote = Vote(op["voter"], authorperm=authorperm, blockchain_instance=hv)
                 print(
                     "member %s upvoted with %d" % (op["author"], int(vote["rshares"]))
                 )
@@ -208,7 +208,8 @@ def run():
                 if upvote_delay is None:
                     upvote_delay = 300
                 performance = 0
-                c = Comment(authorperm, steem_instance=stm)
+                c = Comment(authorperm, blockchain_instance=hv)
+                vote_SBD = hv.rshares_to_sbd(int(vote["rshares"]))
 
                 try:
                     curation_rewards_SBD = c.get_curation_rewards(
@@ -224,12 +225,11 @@ def run():
                     curation_rewards_SBD = None
 
                 rshares = int(vote["rshares"])
-                vote_SBD = stm.rshares_to_sbd(int(vote["rshares"]))
 
                 best_performance = 0
                 best_time_delay = 0
                 for v in c.get_votes():
-                    v_SBD = stm.rshares_to_sbd(int(v["rshares"]))
+                    v_SBD = hv.rshares_to_sbd(int(v["rshares"]))
                     if (
                         v_SBD > 0
                         and int(v["rshares"]) > rshares * 0.5
@@ -270,7 +270,7 @@ def run():
                     "best_time_delay": best_time_delay,
                     "best_curation_performance": best_performance,
                     "vote_rshares": int(vote["rshares"]),
-                    "updated": datetime.utcnow(),
+                    "updated": datetime.now(timezone.utc)(),
                     "vote_delay": ((op["timestamp"]) - c["created"]).total_seconds(),
                     "performance": performance,
                 }

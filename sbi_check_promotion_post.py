@@ -1,9 +1,9 @@
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.block import Block
 from beem.blockchain import Blockchain
 from beem.comment import Comment
@@ -13,9 +13,9 @@ from beem.wallet import Wallet
 from beembase.signedtransactions import Signed_Transaction
 from beemgraphenebase.base58 import Base58
 
-from steembi.member import Member
-from steembi.storage import ConfigurationDB, MemberDB, TrxDB
-from steembi.transfer_ops_storage import AccountTrx, MemberHistDB, TransferTrx
+from hsbi.member import Member
+from hsbi.storage import ConfigurationDB, MemberDB, TrxDB
+from hsbi.transfer_ops_storage import AccountTrx, MemberHistDB, TransferTrx
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -82,11 +82,11 @@ if __name__ == "__main__":
         "last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
         )
     )
     if True:
-        last_cycle = datetime.utcnow() - timedelta(seconds=60 * 145)
+        last_cycle = datetime.now(timezone.utc)() - timedelta(seconds=60 * 145)
         confStorage.update({"last_cycle": last_cycle})
         print("update member database")
         # memberStorage.wipe(True)
@@ -96,8 +96,8 @@ if __name__ == "__main__":
         # Update current node list from @fullnodeupdate
         nodes = NodeList()
         nodes.update_nodes()
-        stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
-        # stm = Steem()
+        hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
+        # hv = Hive()
         member_data = {}
         n_records = 0
         share_age_member = {}
@@ -105,8 +105,8 @@ if __name__ == "__main__":
             member_data[m] = Member(memberStorage.get(m))
 
         if True:
-            b = Blockchain(steem_instance=stm)
-            wallet = Wallet(steem_instance=stm)
+            b = Blockchain(blockchain_instance=hv)
+            wallet = Wallet(blockchain_instance=hv)
 
             for acc_name in accounts:
                 print(acc_name)
@@ -121,7 +121,7 @@ if __name__ == "__main__":
                     if op["memo"] == "":
                         continue
                     try:
-                        c = Comment(op["memo"], steem_instance=stm)
+                        c = Comment(op["memo"], blockchain_instance=hv)
                     except Exception:
                         continue
                     if c["author"] not in accounts:
@@ -130,13 +130,13 @@ if __name__ == "__main__":
                         comments_transfer.append(c["authorperm"])
                 print("%d comments with transfer found" % len(comments_transfer))
                 for authorperm in comments_transfer:
-                    c = Comment(authorperm, steem_instance=stm)
+                    c = Comment(authorperm, blockchain_instance=hv)
                     print(c["authorperm"])
                     for vote in c["active_votes"]:
                         if vote["rshares"] == 0:
                             continue
                         if (
-                            addTzInfo(datetime.utcnow()) - (vote["time"])
+                            addTzInfo(datetime.now(timezone.utc)()) - (vote["time"])
                         ).total_seconds() / 60 / 60 / 24 <= 7:
                             continue
                         if vote["voter"] not in member_data:
@@ -171,7 +171,7 @@ if __name__ == "__main__":
                                         continue
                                     block = Block(
                                         block_num + block_search_list[block_cnt],
-                                        steem_instance=stm,
+                                        blockchain_instance=hv,
                                     )
                                     for tt in block.transactions:
                                         for op in tt["operations"]:
@@ -198,12 +198,12 @@ if __name__ == "__main__":
                                     signed_tx = Signed_Transaction(transaction)
                                     public_keys = []
                                     for key in signed_tx.verify(
-                                        chain=stm.chain_params, recover_parameter=True
+                                        chain=hv.chain_params, recover_parameter=True
                                     ):
                                         public_keys.append(
                                             format(
-                                                Base58(key, prefix=stm.prefix),
-                                                stm.prefix,
+                                                Base58(key, prefix=hv.prefix),
+                                                hv.prefix,
                                             )
                                         )
 

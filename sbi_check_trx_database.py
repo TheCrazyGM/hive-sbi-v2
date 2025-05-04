@@ -3,8 +3,8 @@ import os
 
 import dataset
 
-from steembi.storage import MemberDB, TrxDB
-from steembi.transfer_ops_storage import AccountTrx
+from hsbi.storage import MemberDB, TrxDB
+from hsbi.transfer_ops_storage import AccountTrx
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # Update current node list from @fullnodeupdate
     # nodes = NodeList()
     # nodes.update_nodes()
-    # stm = Steem(node=nodes.get_nodes())
+    # hv = Hive(node=nodes.get_nodes())
     data = trxStorage.get_all_data()
     status = {}
     share_type = {}

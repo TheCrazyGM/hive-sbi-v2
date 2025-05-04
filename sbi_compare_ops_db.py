@@ -3,14 +3,14 @@ import os
 import time
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.blockchain import Blockchain
 from beem.nodelist import NodeList
 
-from steembi.storage import (
+from hsbi.storage import (
     AccountsDB,
 )
-from steembi.transfer_ops_storage import AccountTrx
+from hsbi.transfer_ops_storage import AccountTrx
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -36,12 +36,12 @@ if __name__ == "__main__":
     nodes = NodeList()
     nodes.update_nodes()
     # nodes.update_nodes(weights={"hist": 1})
-    stm = Steem(node=nodes.get_nodes(hive=hive_blockchain))
+    hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
     # print(str(stm))
 
     print("Check account history ops.")
 
-    blockchain = Blockchain(steem_instance=stm)
+    blockchain = Blockchain(blockchain_instance=hv)
 
     accountTrx = {}
     for account in accounts:

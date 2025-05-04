@@ -1,8 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import unittest
 
-from steembi.memo_parser import MemoParser
+from hsbi.memo_parser import MemoParser
 
 
 class Testcases(unittest.TestCase):

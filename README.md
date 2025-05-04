@@ -15,7 +15,7 @@ apt-get install libmariadbclient-dev
 pip3 install beem dataset  mysqlclient
 ```
 
-Compile and install steembi, the helper library for all steembasicincome scripts
+Compile and install hsbi, the helper library for all steembasicincome scripts
 
 ```
 python setup.py install

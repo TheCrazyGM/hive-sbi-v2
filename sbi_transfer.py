@@ -1,18 +1,18 @@
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dataset
-from beem import Steem
+from beem import Hive
 from beem.account import Account
 from beem.amount import Amount
 from beem.nodelist import NodeList
 from beem.utils import formatTimeString
 
-from steembi.member import Member
-from steembi.parse_hist_op import ParseAccountHist
-from steembi.storage import (
+from hsbi.member import Member
+from hsbi.parse_hist_op import ParseAccountHist
+from hsbi.storage import (
     AccountsDB,
     ConfigurationDB,
     KeysDB,
@@ -21,7 +21,7 @@ from steembi.storage import (
     TransactionOutDB,
     TrxDB,
 )
-from steembi.transfer_ops_storage import AccountTrx
+from hsbi.transfer_ops_storage import AccountTrx
 
 
 def run():
@@ -68,13 +68,13 @@ def run():
         "sbi_transfer: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.utcnow() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
         )
     )
 
     if (
         last_cycle is not None
-        and (datetime.utcnow() - last_cycle).total_seconds() > 60 * share_cycle_min
+        and (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
         key_list = []
         print("Parse new transfers.")
@@ -87,8 +87,8 @@ def run():
             nodes.update_nodes()
         except Exception as e:
             print(f"could not update nodes: {str(e)}")
-        stm = Steem(keys=key_list, node=nodes.get_nodes(hive=hive_blockchain))
-        # set_shared_steem_instance(stm)
+        hv = Hive(keys=key_list, node=nodes.get_nodes(hive=hive_blockchain))
+        # set_shared_blockchain_instance(stm)
 
         # print("load member database")
         member_accounts = memberStorage.get_all_accounts()
@@ -124,7 +124,7 @@ def run():
                 account_trx_name = account_name
             parse_vesting = account_name == "steembasicincome"
             accountTrx[account_trx_name].db = dataset.connect(databaseConnector)
-            account = Account(account_name, steem_instance=stm)
+            account = Account(account_name, blockchain_instance=hv)
             # print(account["name"])
             pah = ParseAccountHist(
                 account,
@@ -134,7 +134,7 @@ def run():
                 transactionOutStorage,
                 member_data,
                 memberStorage=memberStorage,
-                steem_instance=stm,
+                blockchain_instance=hv,
             )
 
             op_index = trxStorage.get_all_op_index(account["name"])
@@ -175,7 +175,7 @@ def run():
                 json_op = json.loads(op["op_dict"])
                 json_op["index"] = op["op_acc_index"] + start_index_offset
                 if account_name != "steembasicincome" and json_op["type"] == "transfer":
-                    if float(Amount(json_op["amount"], steem_instance=stm)) < 1:
+                    if float(Amount(json_op["amount"], blockchain_instance=hv)) < 1:
                         continue
                     if json_op["memo"][:8] == "https://":
                         continue
