@@ -1,72 +1,402 @@
-class BaseDB(object):
-    """Base database class for all storage objects"""
+import logging
+
+from nectar.utils import addTzInfo
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.addHandler(logging.StreamHandler())
+
+timeformat = "%Y%m%d-%H%M%S"
+
+
+class TrxDB:
+    """This is the trx storage class"""
+
+    __tablename__ = "trx"
 
     def __init__(self, db):
         self.db = db
 
     def exists_table(self):
-        """Check if the table exists"""
-        return self.__tablename__ in self.db.tables
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
+        else:
+            return False
 
-    def create_table(self):
-        """Create the table"""
-        table = self.db.create_table(self.__tablename__)
-        return table
+    def get_all_data(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].all()
+
+    def get_all_data_sorted(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].find(order_by="index")
+
+    def get_all_op_index(self, source):
+        """Returns all ids"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(source=source):
+            id_list.append(trx["index"])
+        return id_list
+
+    def get_account(self, account, share_type="standard"):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(account=account, share_type=share_type):
+            id_list.append(trx)
+        return id_list
+
+    def get(self, index, source):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        return table.find_one(index=index, source=source)
+
+    def get_share_type(self, share_type):
+        """Returns all ids"""
+        table = self.db[self.__tablename__]
+        return table.find(share_type=share_type)
+
+    def get_lastest_share_type(self, share_type):
+        table = self.db[self.__tablename__]
+        return table.find_one(order_by="-index", share_type=share_type)
+
+    def get_SBD_transfer(self, account, shares, timestamp, SBD_symbol="SBD"):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        found_trx = None
+        for trx in table.find(account=account, shares=-shares, share_type=SBD_symbol):
+            if addTzInfo(trx["timestamp"]) < addTzInfo(timestamp):
+                found_trx = trx
+        return found_trx
+
+    def update_delegation_shares(self, source, account, shares):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        found_trx = None
+        for trx in table.find(
+            source=source, account=account, status="Valid", share_type="Delegation"
+        ):
+            found_trx = trx
+        data = dict(index=found_trx["index"], source=source, shares=shares)
+        table.update(data, ["index", "source"])
+
+    def update_delegation_state(self, source, account, share_type_old, share_type_new):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        found_trx = None
+        for trx in table.find(
+            source=source, account=account, share_type=share_type_old
+        ):
+            found_trx = trx
+        data = dict(index=found_trx["index"], source=source, share_type=share_type_new)
+        table.update(data, ["index", "source"])
+
+    def update_memo(self, source, account, memo_old, memo_new):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        found_trx = None
+        for trx in table.find(source=source, account=account, memo=memo_old):
+            found_trx = trx
+        data = dict(index=found_trx["index"], source=source, memo=memo_new)
+        table.update(data, ["index", "source"])
+
+    def update_sponsee(self, source, account, memo, sponsee, status):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        found_trx = None
+        for trx in table.find(source=source, account=account, memo=memo):
+            found_trx = trx
+        data = dict(
+            index=found_trx["index"], source=source, sponsee=sponsee, status=status
+        )
+        table.update(data, ["index", "source"])
+
+    def update_sponsee_index(self, index, source, sponsee, status):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        data = dict(index=index, source=source, sponsee=sponsee, status=status)
+        table.update(data, ["index", "source"])
+
+    def update_sponsor_index(self, index, source, sponsor, status):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        data = dict(index=index, source=source, sponsor=sponsor, status=status)
+        table.update(data, ["index", "source"])
+
+    def add(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        table.insert(data)
+        self.db.commit()
+
+    def delete(self, index, source):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(index=index, source=source)
+
+    def delete_all(self, source):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(source=source)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
+        else:
+            table = self.db[self.__tablename__]
+            table.drop
 
 
-class ConfigurationDB(BaseDB):
-    """Configuration storage"""
+class MemberDB:
+    """This is the trx storage class"""
+
+    __tablename__ = "member"
+
+    def __init__(self, db):
+        self.db = db
+
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
+        else:
+            return False
+
+    def get_all_data(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].all()
+
+    def get_all_accounts(self):
+        """Returns all ids"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table:
+            id_list.append(trx["account"])
+        return id_list
+
+    def add(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        table.upsert(data, ["account"])
+        self.db.commit()
+
+    def add_batch(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        self.db.begin()
+        for d in data:
+            table.upsert(d, ["account"])
+
+        self.db.commit()
+
+    def get(self, account):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        return table.find_one(account=account)
+
+    def get_highest_avg_share_age(self):
+        table = self.db[self.__tablename__]
+        return table.find_one(order_by="avg_share_age")
+
+    def get_last_updated_member(self):
+        table = self.db[self.__tablename__]
+        return table.find_one(order_by="-update_at")
+
+    def update_shares(self, account, add_shares, datetime):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        member = table.find_one(account=account)
+        shares = member["shares"] + add_shares
+        data = dict(account=account, shares=shares, latest_enrollment=datetime)
+        table.update(data, ["account"])
+
+    def update_avg_share_age(self, account, avg_share_age):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        data = dict(account=account, avg_share_age=avg_share_age)
+        table.update(data, ["account"])
+
+    def update_last_vote(self, account, last_received_vote):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        data = dict(account=account, last_received_vote=last_received_vote)
+        table.update(data, ["account"])
+
+    def update(self, data):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        table.upsert(data, ["account"])
+
+    def delete(self, account):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(account=account)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
+        else:
+            table = self.db[self.__tablename__]
+            table.drop
+
+
+class ConfigurationDB:
+    """This is the trx storage class"""
 
     __tablename__ = "configuration"
 
     def __init__(self, db):
-        super(ConfigurationDB, self).__init__(db)
+        self.db = db
+
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
+        else:
+            return False
 
     def get(self):
-        """Get configuration"""
+        """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
-        config = table.find_one(id=1)
-        if config is None:
-            return {}
-        return config
+        return table.find_one(id=1)
 
-    def set(self, config):
-        """Set configuration"""
+    def set(self, data):
+        """Add a new data set"""
+        data["id"] = 1
         table = self.db[self.__tablename__]
-        config["id"] = 1
-        if table.find_one(id=1) is None:
-            table.insert(config)
+        table.upsert(data, ["id"])
+
+    def update(self, data):
+        """Change share_age depending on timestamp"""
+        data["id"] = 1
+        table = self.db[self.__tablename__]
+        table.update(data, ["id"])
+
+    def delete(self, account):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(account=account)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
         else:
-            table.update(config, ["id"])
+            table = self.db[self.__tablename__]
+            table.drop
 
-    def update(self, config):
-        """Update configuration"""
-        table = self.db[self.__tablename__]
-        current_config = table.find_one(id=1)
-        if current_config is None:
-            config["id"] = 1
-            table.insert(config)
+
+class BlacklistDB:
+    """This is the trx storage class"""
+
+    __tablename__ = "blacklist"
+
+    def __init__(self, db):
+        self.db = db
+
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
         else:
-            for key, value in config.items():
-                current_config[key] = value
-            table.update(current_config, ["id"])
+            return False
+
+    def get(self):
+        """Returns the public keys stored in the database"""
+        table = self.db[self.__tablename__]
+        return table.find_one(id=1)
+
+    def set(self, data):
+        """Add a new data set"""
+        data["id"] = 1
+        table = self.db[self.__tablename__]
+        table.upsert(data, ["id"])
+
+    def update(self, data):
+        """Change share_age depending on timestamp"""
+        data["id"] = 1
+        table = self.db[self.__tablename__]
+        table.update(data, ["id"])
+
+    def delete(self, account):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(account=account)
 
 
-class AccountsDB(BaseDB):
-    """Accounts storage"""
+class AccountsDB:
+    """This is the accounts storage class"""
 
     __tablename__ = "accounts"
 
     def __init__(self, db):
-        super(AccountsDB, self).__init__(db)
+        self.db = db
+
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
+        else:
+            return False
 
     def get(self):
         """Returns the accounts stored in the database"""
         table = self.db[self.__tablename__]
         accounts = []
         for a in table.all():
-            if a["voting"]:
+            if a["voting"] == 1:
                 accounts.append(a["name"])
+        return accounts
+
+    def get_data(self):
+        table = self.db[self.__tablename__]
+        accounts = {}
+        for acc in table.all():
+            accounts[acc["name"]] = acc
         return accounts
 
     def get_transfer(self):
@@ -78,161 +408,388 @@ class AccountsDB(BaseDB):
                 accounts.append(a["name"])
         return accounts
 
-    def add(self, account_data):
-        """Add an account to the database"""
+    def get_upvote_reward_rshares(self):
+        """Returns the accounts stored in the database"""
         table = self.db[self.__tablename__]
-        if table.find_one(name=account_data["name"]) is None:
-            table.insert(account_data)
+        accounts = []
+        for a in table.all():
+            if a["upvote_reward_rshares"] == 1:
+                accounts.append(a["name"])
+        return accounts
+
+    def get_transfer_memo_sender(self):
+        """Returns the accounts stored in the database"""
+        table = self.db[self.__tablename__]
+        accounts = []
+        for a in table.all():
+            if a["transfer_memo_sender"] == 1:
+                accounts.append(a["name"])
+        return accounts
+
+    def set(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        table.upsert(data, ["name"])
+        self.db.commit()
+
+    def update(self, data):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        table.update(data, ["name"])
+
+    def delete(self, account):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(account=account)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
         else:
-            table.update(account_data, ["name"])
-
-    def update(self, account_data):
-        """Update an account in the database"""
-        table = self.db[self.__tablename__]
-        table.update(account_data, ["name"])
-
-    def get_all(self):
-        """Returns all accounts stored in the database"""
-        table = self.db[self.__tablename__]
-        return table.all()
+            table = self.db[self.__tablename__]
+            table.drop
 
 
-class KeysDB(BaseDB):
-    """Keys storage"""
+class KeysDB:
+    """This is the trx storage class"""
 
-    __tablename__ = "keys"
+    __tablename__ = "steem_keys"
 
     def __init__(self, db):
-        super(KeysDB, self).__init__(db)
+        self.db = db
+
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
+        else:
+            return False
 
     def get(self, account, key_type):
-        """Get a key from the database"""
+        """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
         return table.find_one(account=account, key_type=key_type)
 
-    def add(self, account, key_type, wif, pub_key=None):
-        """Add a key to the database"""
+    def delete(self, account):
+        """Delete a data set
+
+        :param int ID: database id
+        """
         table = self.db[self.__tablename__]
-        key_data = {
-            "account": account,
-            "key_type": key_type,
-            "wif": wif,
-            "pub_key": pub_key,
-        }
-        if table.find_one(account=account, key_type=key_type) is None:
-            table.insert(key_data)
+        table.delete(account=account)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
         else:
-            table.update(key_data, ["account", "key_type"])
+            table = self.db[self.__tablename__]
+            table.drop
 
 
-class MemberDB(BaseDB):
-    """Member storage"""
+class TransferMemoDB:
+    """This is the trx storage class"""
 
-    __tablename__ = "member"
+    __tablename__ = "transfer_memos"
 
     def __init__(self, db):
-        super(MemberDB, self).__init__(db)
+        self.db = db
 
-    def get(self, account):
-        """Get a member from the database"""
-        table = self.db[self.__tablename__]
-        return table.find_one(account=account)
-
-    def add(self, member_data):
-        """Add a member to the database"""
-        table = self.db[self.__tablename__]
-        if table.find_one(account=member_data["account"]) is None:
-            table.insert(member_data)
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
         else:
-            table.update(member_data, ["account"])
+            return False
 
-    def update(self, member_data):
-        """Update a member in the database"""
+    def get(self, memo_type):
+        """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
-        table.update(member_data, ["account"])
+        return table.find_one(memo_type=memo_type)
 
-    def get_all(self):
-        """Returns all members stored in the database"""
-        table = self.db[self.__tablename__]
-        return table.all()
+    def get_all_data(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].all()
 
 
-class TrxDB(BaseDB):
-    """Transaction storage"""
+class TransactionMemoDB:
+    """This is the trx storage class"""
 
-    __tablename__ = "trx"
+    __tablename__ = "transaction_memo"
 
     def __init__(self, db):
-        super(TrxDB, self).__init__(db)
+        self.db = db
 
-    def add(self, trx_data):
-        """Add a transaction to the database"""
-        table = self.db[self.__tablename__]
-        if table.find_one(trx_id=trx_data["trx_id"]) is None:
-            table.insert(trx_data)
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
         else:
-            table.update(trx_data, ["trx_id"])
+            return False
 
-    def get(self, trx_id):
-        """Get a transaction from the database"""
+    def get_all_data(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].all()
+
+    def get_all_ids(self):
+        """Returns all ids"""
         table = self.db[self.__tablename__]
-        return table.find_one(trx_id=trx_id)
+        id_list = []
+        for trx in table:
+            id_list.append(trx["id"])
+        return id_list
+
+    def get_all_op_index(self, source):
+        """Returns all ids"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(source=source):
+            id_list.append(trx["id"])
+        return id_list
+
+    def get_sender(self, sender):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(sender=sender):
+            id_list.append(trx)
+        return id_list
 
     def get_all(self):
-        """Returns all transactions stored in the database"""
+        """Returns all entries for given value"""
         table = self.db[self.__tablename__]
-        return table.all()
+        for d in table:
+            yield d
+
+    def update_memo(self, sender, to, memo_old, memo_new, encrypted):
+        """Change share_age depending on timestamp"""
+        table = self.db[self.__tablename__]
+        found_trx = None
+        for trx in table.find(sender=sender, to=to, memo=memo_old):
+            found_trx = trx
+        data = dict(index=found_trx["id"], memo=memo_new, encrypted=encrypted)
+        table.update(data, ["id"])
+
+    def get(self, ID):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        return table.find_one(id=ID)
+
+    def add(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        table.insert(data)
+        self.db.commit()
+
+    def delete(self, ID):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(id=ID)
+
+    def delete_sender(self, sender):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(sender=sender)
+
+    def delete_to(self, to):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(to=to)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
+        else:
+            table = self.db[self.__tablename__]
+            table.drop
 
 
-class TransactionMemoDB(BaseDB):
-    """Transaction memo storage"""
+class TransactionOutDB:
+    """This is the trx storage class"""
 
-    __tablename__ = "trx_memo"
+    __tablename__ = "transaction_out"
 
     def __init__(self, db):
-        super(TransactionMemoDB, self).__init__(db)
+        self.db = db
 
-    def add(self, memo_data):
-        """Add a transaction memo to the database"""
-        table = self.db[self.__tablename__]
-        if table.find_one(trx_id=memo_data["trx_id"]) is None:
-            table.insert(memo_data)
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
         else:
-            table.update(memo_data, ["trx_id"])
+            return False
 
-    def get(self, trx_id):
-        """Get a transaction memo from the database"""
+    def get_all_data(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].all()
+
+    def get_all_ids(self):
+        """Returns all ids"""
         table = self.db[self.__tablename__]
-        return table.find_one(trx_id=trx_id)
+        id_list = []
+        for trx in table:
+            id_list.append(trx["id"])
+        return id_list
 
-    def get_all(self):
-        """Returns all transaction memos stored in the database"""
+    def get_all_op_index(self, source):
+        """Returns all ids"""
         table = self.db[self.__tablename__]
-        return table.all()
+        id_list = []
+        for trx in table.find(source=source):
+            id_list.append(trx["id"])
+        return id_list
+
+    def get_sender(self, sender):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(sender=sender):
+            id_list.append(trx)
+        return id_list
+
+    def get(self, ID):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        return table.find_one(id=ID)
+
+    def add(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        table.insert(data)
+        self.db.commit()
+
+    def delete(self, ID):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(id=ID)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
+        else:
+            table = self.db[self.__tablename__]
+            table.drop
 
 
-class TransferMemoDB(BaseDB):
-    """Transfer memo storage"""
+class PendingRefundDB:
+    """This is the trx storage class"""
 
-    __tablename__ = "transfer_memo"
+    __tablename__ = "pending_refunds"
 
     def __init__(self, db):
-        super(TransferMemoDB, self).__init__(db)
+        self.db = db
 
-    def add(self, memo_data):
-        """Add a transfer memo to the database"""
-        table = self.db[self.__tablename__]
-        if table.find_one(trx_id=memo_data["trx_id"]) is None:
-            table.insert(memo_data)
+    def exists_table(self):
+        """Check if the database table exists"""
+        if len(self.db.tables) == 0:
+            return False
+        if self.__tablename__ in self.db.tables:
+            return True
         else:
-            table.update(memo_data, ["trx_id"])
+            return False
 
-    def get(self, trx_id):
-        """Get a transfer memo from the database"""
-        table = self.db[self.__tablename__]
-        return table.find_one(trx_id=trx_id)
+    def get_all_data(self):
+        """Returns the public keys stored in the database"""
+        return self.db[self.__tablename__].all()
 
-    def get_all(self):
-        """Returns all transfer memos stored in the database"""
+    def get_all_ids(self):
+        """Returns all ids"""
         table = self.db[self.__tablename__]
-        return table.all()
+        id_list = []
+        for trx in table:
+            id_list.append(trx["id"])
+        return id_list
+
+    def get_all_op_index(self, source):
+        """Returns all ids"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(source=source):
+            id_list.append(trx["id"])
+        return id_list
+
+    def get_sender(self, sender):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        id_list = []
+        for trx in table.find(sender=sender):
+            id_list.append(trx)
+        return id_list
+
+    def get(self, ID):
+        """Returns all entries for given value"""
+        table = self.db[self.__tablename__]
+        return table.find_one(id=ID)
+
+    def add(self, data):
+        """Add a new data set"""
+        table = self.db[self.__tablename__]
+        table.insert(data)
+        self.db.commit()
+
+    def delete(self, ID):
+        """Delete a data set
+
+        :param int ID: database id
+        """
+        table = self.db[self.__tablename__]
+        table.delete(id=ID)
+
+    def wipe(self, sure=False):
+        """Purge the entire database. No data set will survive this!"""
+        if not sure:
+            log.error(
+                "You need to confirm that you are sure "
+                "and understand the implications of "
+                "wiping your wallet!"
+            )
+            return
+        else:
+            table = self.db[self.__tablename__]
+            table.drop

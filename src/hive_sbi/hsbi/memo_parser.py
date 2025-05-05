@@ -1,106 +1,239 @@
-import json
-import re
+import logging
+
+from nectar.account import Account
+from nectar.instance import shared_blockchain_instance
+
+log = logging.getLogger(__name__)
 
 
-def parse_memo(memo):
-    """
-    Parse a memo to extract commands and parameters
+class MemoParser:
+    def __init__(self, blockchain_instance=None):
+        self.steem = blockchain_instance or shared_blockchain_instance()
+        self.allowed_memo_words = [
+            "for",
+            "and",
+            "sponsor",
+            "shares",
+            "share",
+            "sponsorship",
+            "please",
+            "steem",
+            "thanks",
+            "additional",
+            "sponsee",
+            "sponsoring",
+            "sponser",
+            "one",
+            "you",
+            "thank",
+            "enroll",
+            "sponsering:",
+            "sponsoring;",
+            "sponsoring:",
+            "would",
+            "like",
+            "too",
+            "enroll:",
+            "sponsor:",
+        ]
 
-    Args:
-        memo (str): Memo text
+    def parse_memo(self, memo, shares, account):
+        if memo[0] == "'":
+            memo = memo[1:]
+        if memo[-1] == "'":
+            memo = memo[:-1]
+        words_memo = memo.strip().lower().replace(",", "  ").replace('"', "").split(" ")
 
-    Returns:
-        dict: Parsed memo data
-    """
-    memo = memo.strip()
-    memo_data = {"command": None, "params": {}}
+        sponsors = {}
+        no_numbers = True
+        amount_left = shares
+        word_count = 0
+        not_parsed_words = []
+        n_words = len(words_memo)
+        digit_found = None
+        sponsor = None
+        account_error = False
 
-    # Check for JSON format
-    if memo.startswith("{") and memo.endswith("}"):
-        try:
-            json_data = json.loads(memo)
-            if "command" in json_data:
-                memo_data["command"] = json_data["command"]
-                memo_data["params"] = {k: v for k, v in json_data.items() if k != "command"}
-            return memo_data
-        except json.JSONDecodeError:
-            pass
+        for w in words_memo:
+            if len(w) == 0:
+                continue
+            if w in self.allowed_memo_words:
+                continue
+            if amount_left >= 1:
+                account_name = ""
+                account_found = False
+                w_digit = w.replace("x", "", 1).replace("-", "", 1).replace(";", "", 1)
+                if w_digit.isdigit():
+                    no_numbers = False
+                    digit_found = int(w_digit)
+                elif len(w) < 3:
+                    continue
+                elif w[:21] == "https://steemit.com/@" and "/" not in w[21:]:
+                    try:
+                        account_name = (
+                            w[21:].replace("!", "").replace('"', "").replace(";", "")
+                        )
+                        if account_name[0] == "'":
+                            account_name = account_name[1:]
+                        if account_name[-1] == "'":
+                            account_name = account_name[:-1]
+                        if account_name[-1] == ".":
+                            account_name = account_name[:-1]
+                        if account_name[0] == "@":
+                            account_name = account_name[1:]
+                        account_name = account_name.strip()
+                        acc = Account(account_name, blockchain_instance=self.steem)
+                        account_found = True
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
+                        account_error = True
+                elif len(w.split(":")) == 2 and "/" not in w:
+                    try:
+                        account_name1 = w.split(":")[0]
+                        account_name = w.split(":")[1]
+                        if account_name[0] == "'":
+                            account_name = account_name[1:]
+                        if account_name[-1] == "'":
+                            account_name = account_name[:-1]
+                        if account_name1[0] == "'":
+                            account_name1 = account_name1[1:]
+                        if account_name1[-1] == "'":
+                            account_name1 = account_name1[:-1]
+                        if account_name1[0] == "@":
+                            account_name1 = account_name1[1:]
+                        if account_name[0] == "@":
+                            account_name = account_name[1:]
+                        account_name = account_name.strip()
+                        account_name1 = account_name1.strip()
+                        # Verify accounts exist by attempting to create Account objects
+                        Account(account_name1, blockchain_instance=self.steem)
+                        Account(account_name, blockchain_instance=self.steem)
+                        account_found = True
+                        if sponsor is None:
+                            sponsor = account_name1
+                        else:
+                            account_error = True
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
+                        account_error = True
+                elif w[0] == "@":
+                    try:
+                        account_name = (
+                            w[1:].replace("!", "").replace('"', "").replace(";", "")
+                        )
+                        if account_name[0] == "'":
+                            account_name = account_name[1:]
+                        if account_name[-1] == "'":
+                            account_name = account_name[:-1]
+                        if account_name[-1] == ".":
+                            account_name = account_name[:-1]
+                        if account_name[0] == "@":
+                            account_name = account_name[1:]
+                        account_name = account_name.strip()
+                        acc = Account(account_name, blockchain_instance=self.steem)
+                        account_found = True
 
-    # Check for command format
-    command_match = re.match(r"^([a-zA-Z0-9_]+)\s*(.*)$", memo)
-    if command_match:
-        command = command_match.group(1).lower()
-        params_str = command_match.group(2).strip()
-        memo_data["command"] = command
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
+                        account_error = True
+                elif len(w.split("@")) > 1:
+                    try:
+                        account_name = (
+                            w.replace("!", "")
+                            .replace('"', "")
+                            .replace(";", "")
+                            .split("@")[1]
+                        )
+                        if account_name[0] == "'":
+                            account_name = account_name[1:]
+                        if account_name[-1] == "'":
+                            account_name = account_name[:-1]
+                        if account_name[-1] == ".":
+                            account_name = account_name[:-1]
+                        if account_name[0] == "@":
+                            account_name = account_name[1:]
+                        account_name = account_name.strip()
+                        acc = Account(account_name, blockchain_instance=self.steem)
+                        account_found = True
 
-        # Parse parameters
-        if params_str:
-            # Key-value pairs
-            kv_pairs = re.findall(r"([a-zA-Z0-9_]+)\s*=\s*([^\s]+)", params_str)
-            for key, value in kv_pairs:
-                memo_data["params"][key.lower()] = value
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
+                        account_error = True
 
-            # Positional parameters
-            if not kv_pairs:
-                memo_data["params"]["value"] = params_str
+                elif len(w) > 16:
+                    continue
 
-    return memo_data
-
-
-def parse_transfer_memo(memo):
-    """
-    Parse a transfer memo to extract commands and parameters
-
-    Args:
-        memo (str): Transfer memo text
-
-    Returns:
-        dict: Parsed transfer memo data
-    """
-    memo_data = parse_memo(memo)
-
-    # Handle specific transfer commands
-    if memo_data["command"] == "sponsor":
-        # Sponsor command
-        if "value" in memo_data["params"]:
-            memo_data["params"]["account"] = memo_data["params"].pop("value")
-    elif memo_data["command"] == "delegate":
-        # Delegate command
-        if "value" in memo_data["params"]:
-            memo_data["params"]["account"] = memo_data["params"].pop("value")
-    elif memo_data["command"] == "undelegate":
-        # Undelegate command
-        if "value" in memo_data["params"]:
-            memo_data["params"]["account"] = memo_data["params"].pop("value")
-    elif memo_data["command"] == "staking":
-        # Staking command
-        if "value" in memo_data["params"]:
-            memo_data["params"]["amount"] = memo_data["params"].pop("value")
-    elif memo_data["command"] == "upvote":
-        # Upvote command
-        if "value" in memo_data["params"]:
-            # Parse @author/permlink format
-            value = memo_data["params"].pop("value")
-            author_permlink_match = re.match(r"^@([a-zA-Z0-9\.-]+)/([a-zA-Z0-9\-]+)$", value)
-            if author_permlink_match:
-                memo_data["params"]["author"] = author_permlink_match.group(1)
-                memo_data["params"]["permlink"] = author_permlink_match.group(2)
-
-    return memo_data
-
-
-def parse_command_json(json_str):
-    """
-    Parse a command JSON string
-
-    Args:
-        json_str (str): Command JSON string
-
-    Returns:
-        dict: Parsed command data
-    """
-    try:
-        data = json.loads(json_str)
-        return data
-    except json.JSONDecodeError:
-        return None
+                else:
+                    try:
+                        account_name = w.replace("!", "").replace('"', "")
+                        if account_name[0] == "'":
+                            account_name = account_name[1:]
+                        if account_name[-1] == "'":
+                            account_name = account_name[:-1]
+                        if account_name[-1] == ".":
+                            account_name = account_name[:-1]
+                        if account_name[0] == "@":
+                            account_name = account_name[1:]
+                        account_name = account_name.strip()
+                        acc = Account(account_name, blockchain_instance=self.steem)
+                        account_found = True
+                    except Exception as e:
+                        print(f"{account_name} is not an account: {e}")
+                        not_parsed_words.append(w)
+                        word_count += 1
+                        account_error = True
+                if account_found and account_name != "" and account_name != account:
+                    if digit_found is not None:
+                        sponsors[account_name] = digit_found
+                        amount_left -= digit_found
+                        digit_found = None
+                    elif account_name in sponsors:
+                        sponsors[account_name] += 1
+                        amount_left -= 1
+                    else:
+                        sponsors[account_name] = 1
+                        amount_left -= 1
+        if n_words == 1 and len(sponsors) == 0:
+            try:
+                account_name = (
+                    words_memo[0]
+                    .replace(",", " ")
+                    .replace("!", " ")
+                    .replace('"', "")
+                    .replace("/", " ")
+                )
+                if account_name[0] == "'":
+                    account_name = account_name[1:]
+                if account_name[-1] == "'":
+                    account_name = account_name[:-1]
+                if account_name[-1] == ".":
+                    account_name = account_name[:-1]
+                if account_name[0] == "@":
+                    account_name = account_name[1:]
+                account_name = account_name.strip()
+                Account(account_name, blockchain_instance=self.steem)
+                if account_name != account:
+                    sponsors[account_name] = 1
+                    amount_left -= 1
+            except Exception as e:
+                account_error = True
+                print(f"{account_name} is not an account: {e}")
+        if len(sponsors) == 1 and shares > 1 and no_numbers:
+            for a in sponsors:
+                sponsors[a] = shares
+        elif (
+            len(sponsors) == 1
+            and shares > 1
+            and not no_numbers
+            and digit_found is not None
+        ):
+            for a in sponsors:
+                sponsors[a] = digit_found
+        elif len(sponsors) > 0 and shares % len(sponsors) == 0 and no_numbers:
+            for a in sponsors:
+                sponsors[a] = shares // len(sponsors)
+        if sponsor is None:
+            sponsor = account
+        if account_error and len(sponsors) == shares:
+            account_error = False
+        return sponsor, sponsors, not_parsed_words, account_error

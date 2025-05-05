@@ -1,79 +1,72 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
-class Member(object):
-    """Member class for Hive SBI"""
+class Member(dict):
+    def __init__(self, account, shares=0, timestamp=None):
+        if isinstance(account, dict):
+            member = account
+        else:
+            member = {
+                "account": account,
+                "shares": shares,
+                "bonus_shares": 0,
+                "total_share_days": 0,
+                "avg_share_age": 0.0,
+                "original_enrollment": timestamp,
+                "latest_enrollment": timestamp,
+                "earned_rshares": 0,
+                "rewarded_rshares": 0,
+                "subscribed_rshares": 0,
+                "curation_rshares": 0,
+                "delegation_rshares": 0,
+                "other_rshares": 0,
+                "balance_rshares": 0,
+                "comment_upvote": False,
+            }
+        self.share_age_list = []
+        self.shares_list = []
+        self.share_timestamp = []
+        super().__init__(member)
 
-    def __init__(self, account, shares=0, bonus_shares=0, total_share_days=0, last_update=None):
-        self.account = account
-        self.shares = shares
-        self.bonus_shares = bonus_shares
-        self.total_share_days = total_share_days
-        self.last_update = last_update or datetime.now()
+    def reset_share_age_list(self):
+        self.share_age_list = []
+        self.shares_list = []
+        self.share_timestamp = []
 
-    def get_total_shares(self):
-        """Get total shares (regular + bonus)"""
-        return self.shares + self.bonus_shares
+    def append_share_age(self, timestamp, shares):
+        if shares == 0:
+            return
+        age = (datetime.now(timezone.utc)) - (timestamp)
+        share_age = int(age.total_seconds() / 60 / 60 / 24)
+        self.share_age_list.append(share_age)
+        self.shares_list.append(shares)
+        self.share_timestamp.append(timestamp)
 
-    def add_shares(self, shares):
-        """Add shares to the member"""
-        self.shares += shares
-        self.last_update = datetime.now()
+    def calc_share_age(self):
+        total_share_days = 0
+        if len(self.share_age_list) == 0:
+            self["total_share_days"] = total_share_days
+            self["avg_share_age"] = total_share_days
+            return
+        for i in range(len(self.share_age_list)):
+            total_share_days += self.share_age_list[i] * self.shares_list[i]
+        self["total_share_days"] = total_share_days
+        if sum(self.shares_list) > 0:
+            self["avg_share_age"] = total_share_days / sum(self.shares_list)
+        else:
+            self["avg_share_age"] = total_share_days
 
-    def add_bonus_shares(self, bonus_shares):
-        """Add bonus shares to the member"""
-        self.bonus_shares += bonus_shares
-        self.last_update = datetime.now()
-
-    def remove_shares(self, shares):
-        """Remove shares from the member"""
-        if shares > self.shares:
-            shares = self.shares
-        self.shares -= shares
-        self.last_update = datetime.now()
-
-    def remove_bonus_shares(self, bonus_shares):
-        """Remove bonus shares from the member"""
-        if bonus_shares > self.bonus_shares:
-            bonus_shares = self.bonus_shares
-        self.bonus_shares -= bonus_shares
-        self.last_update = datetime.now()
-
-    def update_share_days(self):
-        """Update share days based on time since last update"""
-        now = datetime.now()
-        days_since_update = (now - self.last_update).total_seconds() / 86400
-        self.total_share_days += self.get_total_shares() * days_since_update
-        self.last_update = now
-
-    def reset_share_days(self):
-        """Reset share days to zero"""
-        self.total_share_days = 0
-        self.last_update = datetime.now()
-
-    def to_dict(self):
-        """Convert member to dictionary"""
-        return {
-            "account": self.account,
-            "shares": self.shares,
-            "bonus_shares": self.bonus_shares,
-            "total_share_days": self.total_share_days,
-            "last_update": self.last_update.isoformat(),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        """Create member from dictionary"""
-        last_update = data.get("last_update")
-        if isinstance(last_update, str):
-            from dateutil.parser import parse
-
-            last_update = parse(last_update)
-
-        return cls(
-            account=data["account"],
-            shares=data.get("shares", 0),
-            bonus_shares=data.get("bonus_shares", 0),
-            total_share_days=data.get("total_share_days", 0),
-            last_update=last_update,
-        )
+    def calc_share_age_until(self, timestamp):
+        if len(self.share_age_list) == 0:
+            return
+        total_share_days = 0
+        index = 0
+        for i in range(len(self.share_age_list)):
+            if self.share_timestamp[i] <= timestamp:
+                total_share_days += self.share_age_list[i] * self.shares_list[i]
+                index += 1
+        self["total_share_days"] = total_share_days
+        if index > 0:
+            self["avg_share_age"] = total_share_days / index
+        else:
+            self["avg_share_age"] = total_share_days
