@@ -1,52 +1,44 @@
 import json
-import os
 import random
 import time
 
-import dataset
-from beem import Hive
-from beem.blockchain import Blockchain
-from beem.comment import Comment
-from beem.nodelist import NodeList
-from beem.utils import (
-    construct_authorperm,
-)
+from nectar import Hive
+from nectar.blockchain import Blockchain
+from nectar.comment import Comment
+from nectar.nodelist import NodeList
+from nectar.utils import construct_authorperm
 
-from hsbi.member import Member
-from hsbi.storage import (
-    AccountsDB,
-    BlacklistDB,
-    ConfigurationDB,
-    KeysDB,
-    MemberDB,
-    TrxDB,
-)
-from hsbi.transfer_ops_storage import PostsTrx
-from hsbi.version import version as sbiversion
+from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+from hive_sbi.hsbi.member import Member
+from hive_sbi.hsbi.storage import MemberDB
+from hive_sbi.hsbi.transfer_ops_storage import PostsTrx
+from hive_sbi.hsbi.utils import measure_execution_time
+from hive_sbi.hsbi.version import version as sbiversion
 
 
 def run():
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing!")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        # print(config_data)
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        hive_blockchain = config_data["hive_blockchain"]
+    start_prep_time = measure_execution_time()
 
-    start_prep_time = time.time()
-    db = dataset.connect(databaseConnector)
-    db2 = dataset.connect(databaseConnector2)
-    # Create keyStorage
-    trxStorage = TrxDB(db2)
-    memberStorage = MemberDB(db2)
-    confStorage = ConfigurationDB(db2)
-    blacklistStorage = BlacklistDB(db2)
-    accStorage = AccountsDB(db2)
-    keyStorage = KeysDB(db2)
+    # Load configuration
+    config_data = load_config()
+
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get storage objects
+    trxStorage = storage["trx"]
+    memberStorage = storage["member"]
+    confStorage = storage["conf_setup"]
+    blacklistStorage = storage["blacklist"]
+    accStorage = storage["accounts"]
+    keyStorage = storage["keys"]
+
+    # Get blockchain setting
+    hive_blockchain = config_data.get("hive_blockchain", True)
+    hive_blockchain = config_data.get("hive_blockchain", True)
 
     accounts = accStorage.get()
     other_accounts = accStorage.get_transfer()
@@ -157,10 +149,7 @@ def run():
         latest_update_block = b.get_estimated_block_num(latest_update)
     else:
         latest_update_block = start_block
-    print(
-        "latest update %s - %d to %d"
-        % (str(latest_update), latest_update_block, stop_block)
-    )
+    print("latest update %s - %d to %d" % (str(latest_update), latest_update_block, stop_block))
 
     start_block = max([latest_update_block, start_block]) + 1
     if stop_block > start_block + 6000:
@@ -188,8 +177,7 @@ def run():
         if ops["block_num"] - last_block_print > 50:
             last_block_print = ops["block_num"]
             print(
-                "blocks left %d - post found: %d"
-                % (ops["block_num"] - stop_block, len(posts_dict))
+                "blocks left %d - post found: %d" % (ops["block_num"] - stop_block, len(posts_dict))
             )
         authorperm = construct_authorperm(ops)
         c = None
@@ -219,10 +207,7 @@ def run():
         else:
             member_data[ops["author"]]["last_comment"] = c["created"]
             status_command = c.body.find("!sbi status")
-            if (
-                status_command > -1
-                and abs((ops["timestamp"] - c["created"]).total_seconds()) <= 10
-            ):
+            if status_command > -1 and abs((ops["timestamp"] - c["created"]).total_seconds()) <= 10:
                 rshares_denom = (
                     member_data[ops["author"]]["rewarded_rshares"]
                     + member_data[ops["author"]]["balance_rshares"]
@@ -238,14 +223,10 @@ def run():
                     hv.rshares_to_sbd(member_data[ops["author"]]["balance_rshares"]),
                 )
                 if member_data[ops["author"]]["comment_upvote"] == 0:
-                    rshares = (
-                        member_data[ops["author"]]["balance_rshares"]
-                        / comment_vote_divider
-                    )
+                    rshares = member_data[ops["author"]]["balance_rshares"] / comment_vote_divider
                     if rshares > minimum_vote_threshold:
-                        reply_body += (
-                            "* your next SBI upvote is predicted to be %.3f $\n"
-                            % (hv.rshares_to_sbd(rshares))
+                        reply_body += "* your next SBI upvote is predicted to be %.3f $\n" % (
+                            hv.rshares_to_sbd(rshares)
                         )
                     else:
                         reply_body += (
@@ -256,20 +237,15 @@ def run():
                             )
                         )
                 else:
-                    rshares = (
-                        member_data[ops["author"]]["balance_rshares"]
-                        / comment_vote_divider
-                    )
+                    rshares = member_data[ops["author"]]["balance_rshares"] / comment_vote_divider
                     # reply_body += "* as you did not wrote a post within the last 7 days, your pending vote accumulates until you post."
                     if rshares > minimum_vote_threshold * 20:
-                        reply_body += (
-                            "* your next SBI upvote is predicted to be %.3f $\n"
-                            % (hv.rshares_to_sbd(int(minimum_vote_threshold * 20)))
+                        reply_body += "* your next SBI upvote is predicted to be %.3f $\n" % (
+                            hv.rshares_to_sbd(int(minimum_vote_threshold * 20))
                         )
                     elif rshares > minimum_vote_threshold * 2:
-                        reply_body += (
-                            "* your next SBI upvote is predicted to be %.3f $\n"
-                            % (hv.rshares_to_sbd(rshares))
+                        reply_body += "* your next SBI upvote is predicted to be %.3f $\n" % (
+                            hv.rshares_to_sbd(rshares)
                         )
                     else:
                         reply_body += (
@@ -281,31 +257,18 @@ def run():
                         )
                 if rshares_denom > 0:
                     reply_body += "\n\nStructure of your total SBI vote value:\n"
-                    reply_body += (
-                        "* %.2f %% has come from your subscription level\n"
-                        % (
-                            member_data[ops["author"]]["subscribed_rshares"]
-                            / rshares_denom
-                            * 100
-                        )
+                    reply_body += "* %.2f %% has come from your subscription level\n" % (
+                        member_data[ops["author"]]["subscribed_rshares"] / rshares_denom * 100
                     )
                     reply_body += "* %.2f %% has come from your bonus units\n" % (
-                        member_data[ops["author"]]["delegation_rshares"]
-                        / rshares_denom
-                        * 100
+                        member_data[ops["author"]]["delegation_rshares"] / rshares_denom * 100
                     )
                     reply_body += "* %.2f %% has come from upvoting rewards\n" % (
-                        member_data[ops["author"]]["curation_rshares"]
-                        / rshares_denom
-                        * 100
+                        member_data[ops["author"]]["curation_rshares"] / rshares_denom * 100
                     )
                     reply_body += (
                         "* %.2f %% has come from new account bonus or extra value from pre-automation rewards\n"
-                        % (
-                            member_data[ops["author"]]["other_rshares"]
-                            / rshares_denom
-                            * 100
-                        )
+                        % (member_data[ops["author"]]["other_rshares"] / rshares_denom * 100)
                     )
                 if len(comment_footer) > 0:
                     reply_body += "<br>\n"
@@ -338,11 +301,7 @@ def run():
             "tags" in c and c["tags"] is not None and type(c["tags"]) == type([])
         ):  # ensure that tags is an array
             for tag in c["tags"]:
-                if (
-                    tag is not None
-                    and isinstance(tag, str)
-                    and tag.lower() in blacklist_tags
-                ):
+                if tag is not None and isinstance(tag, str) and tag.lower() in blacklist_tags:
                     skip = True
         json_metadata = c.json_metadata
         if isinstance(json_metadata, str):
@@ -356,11 +315,7 @@ def run():
                 app = app["name"]
             if app is not None and isinstance(app, str) and app.find("/") > -1:
                 app = app.split("/")[0]
-            if (
-                app is not None
-                and isinstance(app, str)
-                and app.lower() in blacklist_apps
-            ):
+            if app is not None and isinstance(app, str) and app.lower() in blacklist_apps:
                 skip = True
         for s in blacklist_body:
             if c.body.find(s) > -1:
@@ -383,10 +338,7 @@ def run():
         if len(posts_dict) > 100:
             start_time = time.time()
             postTrx.add_batch(posts_dict)
-            print(
-                "Adding %d post took %.2f seconds"
-                % (len(posts_dict), time.time() - start_time)
-            )
+            print("Adding %d post took %.2f seconds" % (len(posts_dict), time.time() - start_time))
             posts_dict = {}
 
         cnt += 1
@@ -396,20 +348,17 @@ def run():
     for m in changed_member_data:
         member_data_list.append(member_data[m])
 
-    db2 = dataset.connect(databaseConnector2)
+    # Use the existing db2 connection from setup_database_connections
     memberStorage = MemberDB(db2)
     memberStorage.add_batch(member_data_list)
     member_data_list = []
     if len(posts_dict) > 0:
         start_time = time.time()
         postTrx.add_batch(posts_dict)
-        print(
-            "Adding %d post took %.2f seconds"
-            % (len(posts_dict), time.time() - start_time)
-        )
+        print("Adding %d post took %.2f seconds" % (len(posts_dict), time.time() - start_time))
         posts_dict = {}
 
-    print("stream posts script run %.2f s" % (time.time() - start_prep_time))
+    print(f"stream posts script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

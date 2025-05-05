@@ -7,12 +7,13 @@ python scripts for automation of steembasicincome
 ### Installation of needed packages
 
 The following packages are needed, when running the scripts on Ubuntu:
+
 ```
 apt-get install libmariadbclient-dev
 ```
 
 ```
-pip3 install beem dataset  mysqlclient
+pip3 install nectar dataset  mysqlclient
 ```
 
 Compile and install hsbi, the helper library for all steembasicincome scripts
@@ -27,7 +28,6 @@ python setup.py install
 mysql -u username -p sbi < sql/sbi.sql
 mysql -u username -p sbi_steem_ops < sql/sbi_steem_ops.sql
 ```
-
 
 ### Creating a service script
 
@@ -47,6 +47,7 @@ systemctl status sbirunner
 ```
 
 The blacklist script is run once a day:
+
 ```
 
 cp systemd/blacklist.service to /etc/systemd/system/
@@ -71,11 +72,13 @@ A file `config.json` needs to be created:
         "mgnt_shares": {"josephsavage": 4, "holger80": 1}
 }
 ```
+
 For STEEM set hive_blockchain to false.
 
 ## Running steembasicincome
 
 The following scripts need to run:
+
 ```
 python3 sbi_upvote_post_comment.py
 python3 sbi_store_ops_db.py

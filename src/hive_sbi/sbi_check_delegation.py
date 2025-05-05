@@ -1,15 +1,11 @@
-import json
-import os
 from datetime import datetime, timezone
 
-import dataset
-from beem import Hive
-from beem.instance import set_shared_blockchain_instance
-from beem.nodelist import NodeList
-from beem.utils import formatTimeString
+from nectar import Hive
+from nectar.instance import set_shared_blockchain_instance
+from nectar.nodelist import NodeList
+from nectar.utils import formatTimeString
 
-from hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
-from hsbi.transfer_ops_storage import TransferTrx
+from hive_sbi.hsbi.transfer_ops_storage import TransferTrx
 
 
 def calculate_shares(delegation_shares, sp_share_ratio):
@@ -17,25 +13,30 @@ def calculate_shares(delegation_shares, sp_share_ratio):
 
 
 def run():
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing!")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        # print(config_data)
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        mgnt_shares = config_data["mgnt_shares"]
-        hive_blockchain = config_data["hive_blockchain"]
+    from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+    from hive_sbi.hsbi.utils import measure_execution_time
 
-    db = dataset.connect(databaseConnector)
-    db2 = dataset.connect(databaseConnector2)
-    confStorage = ConfigurationDB(db2)
+    start_time = measure_execution_time()
 
-    accountStorage = AccountsDB(db2)
+    # Load configuration
+    config_data = load_config()
+
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get account storage
+    accountStorage = storage["accounts"]
     accounts = accountStorage.get()
     other_accounts = accountStorage.get_transfer()
+
+    # Get configuration storage
+    confStorage = storage["conf_setup"]
+
+    # Get blockchain setting
+    hive_blockchain = config_data.get("hive_blockchain", True)
 
     conf_setup = confStorage.get()
 
@@ -49,13 +50,13 @@ def run():
         "sbi_check_delegation: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60,
         )
     )
 
     if (
         last_cycle is not None
-        and (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min
+        and (datetime.now(timezone.utc) - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
         nodes = NodeList()
         try:
@@ -65,9 +66,10 @@ def run():
         hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
         set_shared_blockchain_instance(hv)
 
-        transferStorage = TransferTrx(db)
-        trxStorage = TrxDB(db2)
-        memberStorage = MemberDB(db2)
+        # Get storage objects
+        transferStorage = TransferTrx(db, "sbi")
+        trxStorage = storage["trx"]
+        memberStorage = storage["member"]
 
         # Update current node list from @fullnodeupdate
 
@@ -97,7 +99,7 @@ def run():
 
         sorted_delegation_list = sorted(
             delegation_list,
-            key=lambda x: (datetime.now(timezone.utc)() - x["timestamp"]).total_seconds(),
+            key=lambda x: (datetime.now(timezone.utc) - x["timestamp"]).total_seconds(),
             reverse=True,
         )
 
@@ -144,9 +146,7 @@ def run():
                 trxStorage.update_delegation_shares(account, acc, shares)
                 continue
             delegation_leased[acc] = delegation_account[acc]
-            trxStorage.update_delegation_state(
-                account, acc, "Delegation", "DelegationLeased"
-            )
+            trxStorage.update_delegation_state(account, acc, "Delegation", "DelegationLeased")
             print("set delegration from %s to leased" % acc)
 
         dd = delegation
@@ -164,6 +164,8 @@ def run():
         )
 
         confStorage.update({"last_delegation_check": last_delegation_check})
+
+        print(f"Delegation check completed in {measure_execution_time(start_time):.2f} seconds")
 
 
 if __name__ == "__main__":

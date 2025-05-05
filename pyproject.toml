@@ -1,0 +1,90 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hive-sbi-v3"
+version = "0.1.0"
+description = "Hive SBI (Steem Basic Income) - A community project supporting people to power up more HIVE"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = [
+    "dataset>=1.6.2",
+    "dateutils>=0.6.12",
+    "hive-nectar>=0.0.7",
+    "mysqlclient>=2.2.7",
+]
+
+[project.scripts]
+hsbi = "hive_sbi.hsbi.runner:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hive_sbi"]
+
+[tool.uv]
+default-groups = [ ]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+exclude = [
+    ".tox",
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "build",
+    "dist",
+    "tests/fixtures/*",
+    "*.pyc",
+    "*.egg-info",
+    ".cache",
+    ".eggs",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"**/{tests,docs,tools}/*" = ["E402"]
+
+
+[tool.mypy]
+python_version = ">3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[dependency-groups]
+dev = [
+    "mock",
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "parameterized",
+    "coverage",
+    "tox",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "doc8",
+    "ruff",
+    "readme_renderer",
+    "sphinx-click",
+    "codacy-coverage",
+    "codecov",
+    "build",
+    "tomli",
+]

@@ -1,60 +1,64 @@
 import json
-import os
 
-import dataset
-from beem import Hive
-from beem.nodelist import NodeList
-from beem.utils import formatTimeString
+from nectar import Hive
+from nectar.nodelist import NodeList
+from nectar.utils import formatTimeString
 
-from hsbi.member import Member
-from hsbi.storage import MemberDB, TrxDB
+from hive_sbi.hsbi.member import Member
+from hive_sbi.hsbi.utils import (
+    load_config,
+    measure_execution_time,
+    setup_database_connections,
+    setup_storage_objects,
+)
 
-if __name__ == "__main__":
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing!")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        print(config_data)
-        accounts = config_data["accounts"]
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        other_accounts = config_data["other_accounts"]
-        mgnt_shares = config_data["mgnt_shares"]
-        hive_blockchain = config_data["hive_blockchain"]
 
-    db2 = dataset.connect(databaseConnector2)
-    # Create keyStorage
-    trxStorage = TrxDB(db2)
-    memberStorage = MemberDB(db2)
+def run():
+    """Run the build member database module"""
+    start_time = measure_execution_time()
 
-    newTrxStorage = False
+    # Load configuration
+    config_data = load_config()
+
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get storage objects
+    trxStorage = storage["trx"]
+    memberStorage = storage["members"]
+
+    # Get configuration values
+    hive_blockchain = config_data.get("hive_blockchain", True)
+
+    # Create tables if they don't exist
     if not trxStorage.exists_table():
-        newTrxStorage = True
         trxStorage.create_table()
 
-    newMemberStorage = False
     if not memberStorage.exists_table():
-        newMemberStorage = True
         memberStorage.create_table()
 
     # Update current node list from @fullnodeupdate
-    print("build member database")
-    # memberStorage.wipe(True)
+    print("Building member database...")
+
+    # Clear existing member data
     accs = memberStorage.get_all_accounts()
     for a in accs:
         memberStorage.delete(a)
+
+    # Setup Hive connection
     nodes = NodeList()
     try:
         nodes.update_nodes()
     except Exception as e:
-        print(f"could not update nodes: {str(e)}")
-    hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
+        print(f"Could not update nodes: {str(e)}")
+    # Initialize Hive connection for potential future use
+    # Not directly used in this file but kept for consistency with other modules
+    _ = Hive(node=nodes.get_nodes(hive=hive_blockchain))
+    # Get all transaction data
     data = trxStorage.get_all_data()
-    status = {}
-    share_type = {}
-    n_records = 0
     member_data = {}
     for op in data:
         if op["status"] == "Valid":
@@ -70,7 +74,6 @@ if __name__ == "__main__":
             sponsor = op["sponsor"]
             sponsee = json.loads(op["sponsee"])
             shares = op["shares"]
-            share_age = 0
             if isinstance(op["timestamp"], str):
                 timestamp = formatTimeString(op["timestamp"])
             else:
@@ -98,6 +101,7 @@ if __name__ == "__main__":
                     member_data[s]["shares"] += shares
                     member_data[s].append_share_age(timestamp, shares)
 
+    # Remove members with zero or negative shares
     empty_shares = []
     for m in member_data:
         if member_data[m]["shares"] <= 0:
@@ -106,17 +110,26 @@ if __name__ == "__main__":
     for del_acc in empty_shares:
         del member_data[del_acc]
 
+    # Calculate share statistics
     shares = 0
     bonus_shares = 0
     for m in member_data:
         member_data[m].calc_share_age()
         shares += member_data[m]["shares"]
         bonus_shares += member_data[m]["bonus_shares"]
-    print("shares: %d" % shares)
-    print("bonus shares: %d" % bonus_shares)
-    print("total shares: %d" % (shares + bonus_shares))
 
+    print(f"Shares: {shares}")
+    print(f"Bonus shares: {bonus_shares}")
+    print(f"Total shares: {shares + bonus_shares}")
+
+    # Save member data to database
     member_list = []
     for m in member_data:
         member_list.append(member_data[m])
     memberStorage.add_batch(member_list)
+
+    print(f"Member database build completed in {measure_execution_time(start_time):.2f} seconds")
+
+
+if __name__ == "__main__":
+    run()

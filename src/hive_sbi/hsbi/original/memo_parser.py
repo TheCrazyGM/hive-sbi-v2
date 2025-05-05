@@ -1,14 +1,18 @@
-import logging
+# This Python file uses the following encoding: utf-8
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from nectar.account import Account
-from nectar.instance import shared_blockchain_instance
+import logging
+from builtins import int
+
+from beem.account import Account
+from beem.instance import shared_steem_instance
 
 log = logging.getLogger(__name__)
 
 
 class MemoParser(object):
-    def __init__(self, blockchain_instance=None):
-        self.steem = blockchain_instance or shared_blockchain_instance()
+    def __init__(self, steem_instance=None):
+        self.steem = steem_instance or shared_steem_instance()
         self.allowed_memo_words = [
             "for",
             "and",
@@ -82,7 +86,7 @@ class MemoParser(object):
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
                     except Exception as e:
                         print(f"{account_name} is not an account: {e}")
@@ -105,8 +109,8 @@ class MemoParser(object):
                             account_name = account_name[1:]
                         account_name = account_name.strip()
                         account_name1 = account_name1.strip()
-                        acc1 = Account(account_name1, blockchain_instance=self.steem)
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc1 = Account(account_name1, steem_instance=self.steem)
+                        acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
                         if sponsor is None:
                             sponsor = account_name1
@@ -129,7 +133,7 @@ class MemoParser(object):
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
 
                     except Exception as e:
@@ -152,7 +156,7 @@ class MemoParser(object):
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
 
                     except Exception as e:
@@ -174,7 +178,7 @@ class MemoParser(object):
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, steem_instance=self.steem)
                         account_found = True
                     except Exception as e:
                         print(f"{account_name} is not an account: {e}")
@@ -210,7 +214,7 @@ class MemoParser(object):
                 if account_name[0] == "@":
                     account_name = account_name[1:]
                 account_name = account_name.strip()
-                Account(account_name, blockchain_instance=self.steem)
+                Account(account_name, steem_instance=self.steem)
                 if account_name != account:
                     sponsors[account_name] = 1
                     amount_left -= 1

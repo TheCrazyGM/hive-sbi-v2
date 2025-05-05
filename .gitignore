@@ -67,3 +67,8 @@ target/
 */.ropeproject/
 
 config.json
+
+# SQLite database files
+*.db
+*.db-journal
+*.db-wal

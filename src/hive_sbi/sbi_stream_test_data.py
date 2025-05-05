@@ -2,13 +2,13 @@ import json
 import os
 
 import dataset
-from beem import Hive
-from beem.account import Account
-from beem.blockchain import Blockchain
-from beem.instance import set_shared_blockchain_instance
-from beem.nodelist import NodeList
+from nectar import Hive
+from nectar.account import Account
+from nectar.blockchain import Blockchain
+from nectar.instance import set_shared_blockchain_instance
+from nectar.nodelist import NodeList
 
-from hsbi.transfer_ops_storage import AccountTrx
+from hive_sbi.hsbi.transfer_ops_storage import AccountTrx
 
 if __name__ == "__main__":
     config_file = "config.json"

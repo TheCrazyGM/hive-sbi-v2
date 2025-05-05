@@ -4,17 +4,17 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import dataset
-from beem import Hive
-from beem.blockchain import Blockchain
-from beem.comment import Comment
-from beem.instance import set_shared_blockchain_instance
-from beem.nodelist import NodeList
-from beem.utils import addTzInfo, construct_authorperm, formatTimeString
-from beem.vote import Vote
+from nectar import Hive
+from nectar.blockchain import Blockchain
+from nectar.comment import Comment
+from nectar.instance import set_shared_blockchain_instance
+from nectar.nodelist import NodeList
+from nectar.utils import addTzInfo, construct_authorperm, formatTimeString
+from nectar.vote import Vote
 
-from hsbi.member import Member
-from hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
-from hsbi.transfer_ops_storage import (
+from hive_sbi.hsbi.member import Member
+from hive_sbi.hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
+from hive_sbi.hsbi.transfer_ops_storage import (
     CurationOptimizationTrx,
     MemberHistDB,
 )
@@ -198,9 +198,7 @@ def run():
             if op["author"] in member_accounts and op["voter"] in accounts:
                 authorperm = construct_authorperm(op["author"], op["permlink"])
                 vote = Vote(op["voter"], authorperm=authorperm, blockchain_instance=hv)
-                print(
-                    "member %s upvoted with %d" % (op["author"], int(vote["rshares"]))
-                )
+                print("member %s upvoted with %d" % (op["author"], int(vote["rshares"])))
                 member_data[op["author"]]["rewarded_rshares"] += int(vote["rshares"])
                 member_data[op["author"]]["balance_rshares"] -= int(vote["rshares"])
 
@@ -212,9 +210,7 @@ def run():
                 vote_SBD = hv.rshares_to_sbd(int(vote["rshares"]))
 
                 try:
-                    curation_rewards_SBD = c.get_curation_rewards(
-                        pending_payout_SBD=True
-                    )
+                    curation_rewards_SBD = c.get_curation_rewards(pending_payout_SBD=True)
                     curation_SBD = curation_rewards_SBD["active_votes"][vote["voter"]]
                     if vote_SBD > 0:
                         performance = float(curation_SBD) / vote_SBD * 100
@@ -235,17 +231,11 @@ def run():
                         and int(v["rshares"]) > rshares * 0.5
                         and curation_rewards_SBD is not None
                     ):
-                        p = (
-                            float(curation_rewards_SBD["active_votes"][v["voter"]])
-                            / v_SBD
-                            * 100
-                        )
+                        p = float(curation_rewards_SBD["active_votes"][v["voter"]]) / v_SBD * 100
                         if p > best_performance:
                             best_performance = p
                             if "time" in v:
-                                best_time_delay = (
-                                    (v["time"]) - c["created"]
-                                ).total_seconds()
+                                best_time_delay = ((v["time"]) - c["created"]).total_seconds()
                             elif "last_update" in v:
                                 best_time_delay = (
                                     (v["last_update"]) - c["created"]
@@ -293,19 +283,13 @@ def run():
             if block_diff_for_db_storage == 0:
                 block_diff_for_db_storage = 1
             print("\n---------------------\n")
-            percentage_done = (
-                (block_num - start_block) / (end_block - start_block) * 100
-            )
+            percentage_done = (block_num - start_block) / (end_block - start_block) * 100
             print(
                 "Block %d -- Datetime %s -- %.2f %% finished"
                 % (block_num, op["timestamp"], percentage_done)
             )
             running_hours = (
-                (end_block - block_num)
-                * time_for_blocks
-                / block_diff_for_db_storage
-                / 60
-                / 60
+                (end_block - block_num) * time_for_blocks / block_diff_for_db_storage / 60 / 60
             )
             print(
                 "Duration for %d blocks: %.2f s (%.3f s per block) -- %.2f hours to go"

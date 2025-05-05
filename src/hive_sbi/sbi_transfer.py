@@ -1,50 +1,42 @@
 import json
-import os
-import time
 from datetime import datetime, timezone
 
-import dataset
-from beem import Hive
-from beem.account import Account
-from beem.amount import Amount
-from beem.nodelist import NodeList
-from beem.utils import formatTimeString
+from nectar import Hive
+from nectar.account import Account
+from nectar.amount import Amount
+from nectar.nodelist import NodeList
+from nectar.utils import formatTimeString
 
-from hsbi.member import Member
-from hsbi.parse_hist_op import ParseAccountHist
-from hsbi.storage import (
-    AccountsDB,
-    ConfigurationDB,
-    KeysDB,
-    MemberDB,
-    TransactionMemoDB,
-    TransactionOutDB,
-    TrxDB,
-)
-from hsbi.transfer_ops_storage import AccountTrx
+from hive_sbi.hsbi.member import Member
+from hive_sbi.hsbi.parse_hist_op import ParseAccountHist
+from hive_sbi.hsbi.transfer_ops_storage import AccountTrx
 
 
 def run():
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing!")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        # print(config_data)
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        mgnt_shares = config_data["mgnt_shares"]
-        hive_blockchain = config_data["hive_blockchain"]
+    from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+    from hive_sbi.hsbi.utils import measure_execution_time
 
-    start_prep_time = time.time()
-    db = dataset.connect(databaseConnector)
-    db2 = dataset.connect(databaseConnector2)
+    start_prep_time = measure_execution_time()
 
-    accountStorage = AccountsDB(db2)
+    # Load configuration
+    config_data = load_config()
+
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get account storage
+    accountStorage = storage["accounts"]
     accounts = accountStorage.get()
     other_accounts = accountStorage.get_transfer()
 
+    # Get management shares and blockchain setting
+    mgnt_shares = config_data.get("mgnt_shares", {})
+    hive_blockchain = config_data.get("hive_blockchain", True)
+
+    # Setup account transaction storage
     accountTrx = {}
     for account in accounts:
         if account == "steembasicincome":
@@ -52,14 +44,15 @@ def run():
         else:
             accountTrx[account] = AccountTrx(db, account)
 
-    # Create keyStorage
-    trxStorage = TrxDB(db2)
-    memberStorage = MemberDB(db2)
-    keyStorage = KeysDB(db2)
-    transactionStorage = TransactionMemoDB(db2)
-    transactionOutStorage = TransactionOutDB(db2)
+    # Get storage objects
+    trxStorage = storage["trx"]
+    memberStorage = storage["member"]
+    keyStorage = storage["keys"]
+    transactionStorage = storage["trx_memo"]
+    transactionOutStorage = storage["trx_out"]
 
-    confStorage = ConfigurationDB(db2)
+    # Get configuration
+    confStorage = storage["conf_setup"]
     conf_setup = confStorage.get()
     last_cycle = conf_setup["last_cycle"]
     share_cycle_min = conf_setup["share_cycle_min"]
@@ -68,13 +61,13 @@ def run():
         "sbi_transfer: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60,
         )
     )
 
     if (
         last_cycle is not None
-        and (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min
+        and (datetime.now(timezone.utc) - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
         key_list = []
         print("Parse new transfers.")
@@ -123,7 +116,7 @@ def run():
             else:
                 account_trx_name = account_name
             parse_vesting = account_name == "steembasicincome"
-            accountTrx[account_trx_name].db = dataset.connect(databaseConnector)
+            accountTrx[account_trx_name].db = db
             account = Account(account_name, blockchain_instance=hv)
             # print(account["name"])
             pah = ParseAccountHist(
@@ -167,10 +160,7 @@ def run():
             for op in ops:
                 if op["op_acc_index"] < start_index - start_index_offset:
                     continue
-                if (
-                    stop_index is not None
-                    and formatTimeString(op["timestamp"]) > stop_index
-                ):
+                if stop_index is not None and formatTimeString(op["timestamp"]) > stop_index:
                     continue
                 json_op = json.loads(op["op_dict"])
                 json_op["index"] = op["op_acc_index"] + start_index_offset
@@ -182,7 +172,7 @@ def run():
 
                 pah.parse_op(json_op, parse_vesting=parse_vesting)
 
-        print("transfer script run %.2f s" % (time.time() - start_prep_time))
+        print(f"transfer script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

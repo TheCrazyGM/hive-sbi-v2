@@ -1,41 +1,44 @@
 import json
-import os
 import time
 from datetime import datetime, timezone
 
-import dataset
-from beem import Hive
-from beem.account import Account
-from beem.amount import Amount
-from beem.blockchain import Blockchain
-from beem.nodelist import NodeList
-from beem.utils import formatTimeString
+from nectar import Hive
+from nectar.account import Account
+from nectar.amount import Amount
+from nectar.nodelist import NodeList
+from nectar.utils import formatTimeString
 
-from hsbi.storage import (
-    AccountsDB,
-    ConfigurationDB,
-)
-from hsbi.transfer_ops_storage import AccountTrx, TransferTrx
+from hive_sbi.hsbi.transfer_ops_storage import AccountTrx
 
 
 def get_account_trx_data(account, start_block, start_index):
-    # Go trough all transfer ops
+    # Go through all transfer ops
     if start_block is not None:
-        trx_in_block = start_block["trx_in_block"]
-        op_in_trx = start_block["op_in_trx"]
-        virtual_op = start_block["virtual_op"]
-        start_block = start_block["block"]
-
-        print("account %s - %d" % (account["name"], start_block))
+        # Check if start_block is a dictionary or an integer
+        if isinstance(start_block, dict):
+            trx_in_block = start_block["trx_in_block"]
+            op_in_trx = start_block["op_in_trx"]
+            virtual_op = start_block["virtual_op"]
+            block_num = start_block["block"]
+            print("account %s - %d" % (account["name"], block_num))
+        else:
+            # start_block is already a block number
+            block_num = start_block
+            trx_in_block = 0
+            op_in_trx = 0
+            virtual_op = False
+            print("account %s - %d" % (account["name"], block_num))
     else:
-        start_block = 0
+        block_num = 0
         trx_in_block = 0
         op_in_trx = 0
-        virtual_op = 0
+        virtual_op = False
 
+    # Check if start_index is a dictionary or an integer
     if start_index is not None:
-        start_index = start_index["op_acc_index"] + 1
-        # print("account %s - %d" % (account["name"], start_index))
+        if isinstance(start_index, dict) and "op_acc_index" in start_index:
+            start_index = start_index["op_acc_index"] + 1
+        # If it's already an integer, use it as is
     else:
         start_index = 0
 
@@ -51,9 +54,7 @@ def get_account_trx_data(account, start_block, start_index):
                 if op["trx_in_block"] < trx_in_block:
                     last_trx = op["trx_in_block"]
                     continue
-                if op["op_in_trx"] <= op_in_trx and (
-                    trx_in_block != last_trx or last_block == 0
-                ):
+                if op["op_in_trx"] <= op_in_trx and (trx_in_block != last_trx or last_block == 0):
                     continue
             else:
                 if op["virtual_op"] <= virtual_op and (trx_in_block == last_trx):
@@ -96,9 +97,7 @@ def get_account_trx_storage_data(account, start_index, hv):
         print("account %s - %d" % (account["name"], start_index))
 
     data = []
-    for op in account.history(
-        start=start_index, use_block_num=False, only_ops=["transfer"]
-    ):
+    for op in account.history(start=start_index, use_block_num=False, only_ops=["transfer"]):
         amount = Amount(op["amount"], blockchain_instance=hv)
         virtual_op = op["virtual_op"]
         trx_in_block = op["trx_in_block"]
@@ -125,41 +124,48 @@ def get_account_trx_storage_data(account, start_index, hv):
 
 
 def run():
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing!")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        # print(config_data)
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        hive_blockchain = config_data["hive_blockchain"]
-    start_prep_time = time.time()
-    # sqlDataBaseFile = os.path.join(path, database)
-    # databaseConnector = "sqlite:///" + sqlDataBaseFile
-    db = dataset.connect(databaseConnector)
-    db2 = dataset.connect(databaseConnector2)
-    accountStorage = AccountsDB(db2)
-    accounts = accountStorage.get()
-    other_accounts = accountStorage.get_transfer()
+    from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+    from hive_sbi.hsbi.utils import measure_execution_time
 
-    confStorage = ConfigurationDB(db2)
-    conf_setup = confStorage.get()
+    # Initialize start time for measuring execution time
+    start_prep_time = time.time()
+
+    # Load configuration
+    config_data = load_config()
+
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get accounts directly from storage
+    accounts = storage["accounts"]
+    other_accounts = storage["other_accounts"]
+
+    # Get hive_blockchain setting
+    hive_blockchain = config_data.get("hive_blockchain", True)
+
+    # Get configuration directly from storage
+    conf_setup = storage["conf_setup"]
     last_cycle = conf_setup["last_cycle"]
     share_cycle_min = conf_setup["share_cycle_min"]
+
+    # Ensure last_cycle has timezone information
+    if last_cycle is not None and last_cycle.tzinfo is None:
+        last_cycle = last_cycle.replace(tzinfo=timezone.utc)
 
     print(
         "sbi_store_ops_db: last_cycle: %s - %.2f min"
         % (
             formatTimeString(last_cycle),
-            (datetime.now(timezone.utc)() - last_cycle).total_seconds() / 60,
+            (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60,
         )
     )
 
     if (
         last_cycle is not None
-        and (datetime.now(timezone.utc)() - last_cycle).total_seconds() > 60 * share_cycle_min
+        and (datetime.now(timezone.utc) - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
         # Update current node list from @fullnodeupdate
         nodes = NodeList()
@@ -170,7 +176,7 @@ def run():
 
         print("Fetch new account history ops.")
 
-        blockchain= Blockchain(blockchain_instance=hv)
+        # Blockchain instance is not needed here
 
         accountTrx = {}
         for account in accounts:
@@ -188,8 +194,8 @@ def run():
                 account_name = "sbi"
             else:
                 account = Account(account_name, blockchain_instance=hv)
-            start_block = accountTrx[account_name].get_latest_block()
-            start_index = accountTrx[account_name].get_latest_index()
+            start_block = accountTrx[account_name].get_latest_block_num()
+            start_index = accountTrx[account_name].get_latest_trx_index(start_block) if start_block is not None else 0
 
             data = get_account_trx_data(account, start_block, start_index)
 
@@ -197,19 +203,22 @@ def run():
             for cnt in range(0, len(data)):
                 data_batch.append(data[cnt])
                 if cnt % 1000 == 0:
-                    accountTrx[account_name].add_batch(data_batch)
+                    # Add each transaction individually since add_batch is not available
+                    for trx in data_batch:
+                        accountTrx[account_name].add(trx)
                     data_batch = []
             if len(data_batch) > 0:
-                accountTrx[account_name].add_batch(data_batch)
+                # Add each transaction individually since add_batch is not available
+                for trx in data_batch:
+                    accountTrx[account_name].add(trx)
                 data_batch = []
 
-        # Create keyStorage
-        db = dataset.connect(databaseConnector)
-        trxStorage = TransferTrx(db)
+        # Process other accounts using the trxStorage from the storage objects
+        transferTrxStorage = storage["transfer_trx"]
 
         for account in other_accounts:
             account = Account(account, blockchain_instance=hv)
-            start_index = trxStorage.get_latest_index(account["name"])
+            start_index = transferTrxStorage.get_latest_index(account["name"])
 
             data = get_account_trx_storage_data(account, start_index, hv)
 
@@ -217,12 +226,16 @@ def run():
             for cnt in range(0, len(data)):
                 data_batch.append(data[cnt])
                 if cnt % 1000 == 0:
-                    trxStorage.add_batch(data_batch)
+                    # Add each transaction individually since add_batch is not available
+                    for trx in data_batch:
+                        transferTrxStorage.add(trx)
                     data_batch = []
             if len(data_batch) > 0:
-                trxStorage.add_batch(data_batch)
+                # Add each transaction individually since add_batch is not available
+                for trx in data_batch:
+                    transferTrxStorage.add(trx)
                 data_batch = []
-        print("store ops script run %.2f s" % (time.time() - start_prep_time))
+        print(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

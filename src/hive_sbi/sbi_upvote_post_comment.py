@@ -1,41 +1,40 @@
-import json
-import os
 import time
 from datetime import datetime, timedelta, timezone
 
-import dataset
-from beem import Hive
-from beem.account import Account
-from beem.blockchain import Blockchain
-from beem.comment import Comment
-from beem.nodelist import NodeList
+from nectar import Hive
+from nectar.account import Account
+from nectar.blockchain import Blockchain
+from nectar.comment import Comment
+from nectar.nodelist import NodeList
 
-from hsbi.member import Member
-from hsbi.storage import AccountsDB, ConfigurationDB, KeysDB, MemberDB, TrxDB
-from hsbi.transfer_ops_storage import PostsTrx
+from hive_sbi.hsbi.member import Member
+from hive_sbi.hsbi.transfer_ops_storage import PostsTrx
 
 
 def run():
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        # print(config_data)
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        hive_blockchain = config_data["hive_blockchain"]
+    from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+    from hive_sbi.hsbi.utils import measure_execution_time
 
-    start_prep_time = time.time()
-    db = dataset.connect(databaseConnector)
-    db2 = dataset.connect(databaseConnector2)
-    # Create keyStorage
-    trxStorage = TrxDB(db2)
-    memberStorage = MemberDB(db2)
-    confStorage = ConfigurationDB(db2)
-    accStorage = AccountsDB(db2)
-    keyStorage = KeysDB(db2)
+    start_prep_time = measure_execution_time()
+
+    # Load configuration
+    config_data = load_config()
+
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get storage objects
+    trxStorage = storage["trx"]
+    memberStorage = storage["member"]
+    confStorage = storage["conf_setup"]
+    accStorage = storage["accounts"]
+    keyStorage = storage["keys"]
+
+    # Get blockchain setting
+    hive_blockchain = config_data.get("hive_blockchain", True)
 
     accounts = accStorage.get()
 
@@ -127,7 +126,7 @@ def run():
     # print("prep time took %.2f s" % (time.time() - start_prep_time))
     for authorperm in post_list:
         created = post_list[authorperm]["created"]
-        if (datetime.now(timezone.utc)() - created).total_seconds() > 1 * 24 * 60 * 60:
+        if (datetime.now(timezone.utc) - created).total_seconds() > 1 * 24 * 60 * 60:
             continue
         if start_timestamp > created:
             continue
@@ -138,7 +137,7 @@ def run():
             continue
         if (
             post_list[authorperm]["main_post"] == 0
-            and (datetime.now(timezone.utc)() - created).total_seconds()
+            and (datetime.now(timezone.utc) - created).total_seconds()
             > comment_vote_timeout_h * 60 * 60
         ):
             postTrx.update_comment_to_old(author, created, True)
@@ -149,9 +148,7 @@ def run():
             continue
         if member["blacklisted"]:
             continue
-        elif member["blacklisted"] is None and (
-            member["hivewatchers"] or member["buildawhale"]
-        ):
+        elif member["blacklisted"] is None and (member["hivewatchers"] or member["buildawhale"]):
             continue
 
         if post_list[authorperm]["main_post"] == 1:
@@ -160,10 +157,7 @@ def run():
             rshares = member["balance_rshares"] / (comment_vote_divider**2)
         if post_list[authorperm]["main_post"] == 1 and rshares < minimum_vote_threshold:
             continue
-        elif (
-            post_list[authorperm]["main_post"] == 0
-            and rshares < minimum_vote_threshold * 2
-        ):
+        elif post_list[authorperm]["main_post"] == 0 and rshares < minimum_vote_threshold * 2:
             continue
         cnt = 0
         c = None
@@ -202,9 +196,7 @@ def run():
         vote_delay_sec = 5 * 60
         if member["upvote_delay"] is not None:
             vote_delay_sec = member["upvote_delay"]
-        if c.time_elapsed() < timedelta(
-            seconds=(vote_delay_sec - upvote_delay_correction)
-        ):
+        if c.time_elapsed() < timedelta(seconds=(vote_delay_sec - upvote_delay_correction)):
             continue
         if (
             member["last_received_vote"] is not None
@@ -223,9 +215,7 @@ def run():
             for acc in voter_accounts:
                 mana = voter_accounts[acc].get_manabar()
                 vote_percentage = (
-                    rshares
-                    / (mana["max_mana"] / 50 * mana["current_mana_pct"] / 100)
-                    * 100
+                    rshares / (mana["max_mana"] / 50 * mana["current_mana_pct"] / 100) * 100
                 )
                 if (
                     highest_pct < mana["current_mana_pct"]
@@ -240,26 +230,15 @@ def run():
                 current_mana = voter_accounts[acc].get_manabar()
             vote_percentage = (
                 rshares
-                / (
-                    current_mana["max_mana"]
-                    / 50
-                    * current_mana["current_mana_pct"]
-                    / 100
-                )
+                / (current_mana["max_mana"] / 50 * current_mana["current_mana_pct"] / 100)
                 * 100
             )
 
             if nobroadcast and voter is not None:
                 print(c["authorperm"])
-                print(
-                    "Comment Vote %s from %s with %.2f %%"
-                    % (author, voter, vote_percentage)
-                )
+                print("Comment Vote %s from %s with %.2f %%" % (author, voter, vote_percentage))
             elif voter is not None:
-                print(
-                    "Comment Upvote %s from %s with %.2f %%"
-                    % (author, voter, vote_percentage)
-                )
+                print("Comment Upvote %s from %s with %.2f %%" % (author, voter, vote_percentage))
                 vote_sucessfull = False
                 voted_after = 300
                 cnt = 0
@@ -275,9 +254,7 @@ def run():
                                     vote_sucessfull = True
                                     if "time" in v:
                                         vote_time = v["time"]
-                                        voted_after = (
-                                            v["time"] - c["created"]
-                                        ).total_seconds()
+                                        voted_after = (v["time"] - c["created"]).total_seconds()
                                     else:
                                         vote_time = v["last_update"]
                                         voted_after = (
@@ -291,9 +268,7 @@ def run():
                         print("retry to vote %s" % c["authorperm"])
                     cnt += 1
                 if vote_sucessfull:
-                    print(
-                        "Vote for %s at %s was sucessfully" % (author, str(vote_time))
-                    )
+                    print("Vote for %s at %s was sucessfully" % (author, str(vote_time)))
                     memberStorage.update_last_vote(author, vote_time)
                     upvote_counter[author] += 1
                 postTrx.update_voted(author, created, vote_sucessfull, voted_after)
@@ -306,9 +281,7 @@ def run():
                 voter_accounts[acc].refresh()
                 mana = voter_accounts[acc].get_manabar()
                 vote_percentage = (
-                    rshares
-                    / (mana["max_mana"] / 50 * mana["current_mana_pct"] / 100)
-                    * 100
+                    rshares / (mana["max_mana"] / 50 * mana["current_mana_pct"] / 100) * 100
                 )
                 if (
                     highest_pct < mana["current_mana_pct"]
@@ -331,19 +304,14 @@ def run():
                         voter_accounts[acc].refresh()
                         mana = voter_accounts[acc].get_manabar()
                         vote_percentage = (
-                            rshares
-                            / (mana["max_mana"] / 50 * mana["current_mana_pct"] / 100)
-                            * 100
+                            rshares / (mana["max_mana"] / 50 * mana["current_mana_pct"] / 100) * 100
                         )
                         if (
-                            highest_mana
-                            < mana["max_mana"] / 50 * mana["current_mana_pct"] / 100
+                            highest_mana < mana["max_mana"] / 50 * mana["current_mana_pct"] / 100
                             and acc not in pool_rshars
                             and vote_percentage > 0.01
                         ):
-                            highest_mana = (
-                                mana["max_mana"] / 50 * mana["current_mana_pct"] / 100
-                            )
+                            highest_mana = mana["max_mana"] / 50 * mana["current_mana_pct"] / 100
                             current_mana = mana
                             voter = acc
                     if voter is None:
@@ -352,27 +320,16 @@ def run():
                     pool_rshars.append(voter)
                     vote_percentage = (
                         rshares
-                        / (
-                            current_mana["max_mana"]
-                            / 50
-                            * current_mana["current_mana_pct"]
-                            / 100
-                        )
+                        / (current_mana["max_mana"] / 50 * current_mana["current_mana_pct"] / 100)
                         * 100
                     )
                     if vote_percentage > 100:
                         vote_percentage = 100
                     if nobroadcast:
                         print(c["authorperm"])
-                        print(
-                            "Vote %s from %s with %.2f %%"
-                            % (author, voter, vote_percentage)
-                        )
+                        print("Vote %s from %s with %.2f %%" % (author, voter, vote_percentage))
                     else:
-                        print(
-                            "Upvote %s from %s with %.2f %%"
-                            % (author, voter, vote_percentage)
-                        )
+                        print("Upvote %s from %s with %.2f %%" % (author, voter, vote_percentage))
                         vote_sucessfull = False
                         cnt = 0
                         vote_time = None
@@ -397,52 +354,29 @@ def run():
                                 print("retry to vote %s" % c["authorperm"])
                             cnt += 1
                         if vote_sucessfull:
-                            print(
-                                "Vote for %s at %s was sucessfully"
-                                % (author, str(vote_time))
-                            )
+                            print("Vote for %s at %s was sucessfully" % (author, str(vote_time)))
                             memberStorage.update_last_vote(author, vote_time)
                     rshares_sum += (
-                        current_mana["max_mana"]
-                        / 50
-                        * current_mana["current_mana_pct"]
-                        / 100
+                        current_mana["max_mana"] / 50 * current_mana["current_mana_pct"] / 100
                     )
                     rshares -= (
-                        current_mana["max_mana"]
-                        / 50
-                        * current_mana["current_mana_pct"]
-                        / 100
+                        current_mana["max_mana"] / 50 * current_mana["current_mana_pct"] / 100
                     )
 
             else:
                 vote_percentage = (
                     rshares
-                    / (
-                        current_mana["max_mana"]
-                        / 50
-                        * current_mana["current_mana_pct"]
-                        / 100
-                    )
+                    / (current_mana["max_mana"] / 50 * current_mana["current_mana_pct"] / 100)
                     * 100
                 )
                 rshares_sum += (
-                    current_mana["max_mana"]
-                    / 50
-                    * current_mana["current_mana_pct"]
-                    / 100
+                    current_mana["max_mana"] / 50 * current_mana["current_mana_pct"] / 100
                 )
                 if nobroadcast:
                     print(c["authorperm"])
-                    print(
-                        "Vote %s from %s with %.2f %%"
-                        % (author, voter, vote_percentage)
-                    )
+                    print("Vote %s from %s with %.2f %%" % (author, voter, vote_percentage))
                 else:
-                    print(
-                        "Upvote %s from %s with %.2f %%"
-                        % (author, voter, vote_percentage)
-                    )
+                    print("Upvote %s from %s with %.2f %%" % (author, voter, vote_percentage))
                     vote_sucessfull = False
                     cnt = 0
                     voted_after = 300
@@ -458,9 +392,7 @@ def run():
                                         vote_sucessfull = True
                                         if "time" in v:
                                             vote_time = v["time"]
-                                            voted_after = (
-                                                v["time"] - c["created"]
-                                            ).total_seconds()
+                                            voted_after = (v["time"] - c["created"]).total_seconds()
                                         else:
                                             vote_time = v["last_update"]
                                             voted_after = (
@@ -474,16 +406,13 @@ def run():
                             print("retry to vote %s" % c["authorperm"])
                         cnt += 1
                     if vote_sucessfull:
-                        print(
-                            "Vote for %s at %s was sucessfully"
-                            % (author, str(vote_time))
-                        )
+                        print("Vote for %s at %s was sucessfully" % (author, str(vote_time)))
                         memberStorage.update_last_vote(author, vote_time)
                         upvote_counter[author] += 1
                     postTrx.update_voted(author, created, vote_sucessfull, voted_after)
 
             print("rshares_sum %d" % rshares_sum)
-    print("upvote script run %.2f s" % (time.time() - start_prep_time))
+    print(f"upvote script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

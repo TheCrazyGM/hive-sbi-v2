@@ -1,6 +1,6 @@
 import unittest
 
-from hsbi.memo_parser import MemoParser
+from hive_sbi.hsbi.memo_parser import MemoParser
 
 
 class Testcases(unittest.TestCase):
