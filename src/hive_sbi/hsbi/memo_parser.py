@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 class MemoParser:
     def __init__(self, blockchain_instance=None):
-        self.steem = blockchain_instance or shared_blockchain_instance()
+        self.hive = blockchain_instance or shared_blockchain_instance()
         self.allowed_memo_words = [
             "for",
             "and",
@@ -80,7 +80,7 @@ class MemoParser:
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, blockchain_instance=self.hive)
                         account_found = True
                     except Exception as e:
                         print(f"{account_name} is not an account: {e}")
@@ -104,8 +104,8 @@ class MemoParser:
                         account_name = account_name.strip()
                         account_name1 = account_name1.strip()
                         # Verify accounts exist by attempting to create Account objects
-                        Account(account_name1, blockchain_instance=self.steem)
-                        Account(account_name, blockchain_instance=self.steem)
+                        Account(account_name1, blockchain_instance=self.hive)
+                        Account(account_name, blockchain_instance=self.hive)
                         account_found = True
                         if sponsor is None:
                             sponsor = account_name1
@@ -126,7 +126,7 @@ class MemoParser:
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, blockchain_instance=self.hive)
                         account_found = True
 
                     except Exception as e:
@@ -146,7 +146,7 @@ class MemoParser:
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, blockchain_instance=self.hive)
                         account_found = True
 
                     except Exception as e:
@@ -168,7 +168,7 @@ class MemoParser:
                         if account_name[0] == "@":
                             account_name = account_name[1:]
                         account_name = account_name.strip()
-                        acc = Account(account_name, blockchain_instance=self.steem)
+                        acc = Account(account_name, blockchain_instance=self.hive)
                         account_found = True
                     except Exception as e:
                         print(f"{account_name} is not an account: {e}")
@@ -204,7 +204,7 @@ class MemoParser:
                 if account_name[0] == "@":
                     account_name = account_name[1:]
                 account_name = account_name.strip()
-                Account(account_name, blockchain_instance=self.steem)
+                Account(account_name, blockchain_instance=self.hive)
                 if account_name != account:
                     sponsors[account_name] = 1
                     amount_left -= 1

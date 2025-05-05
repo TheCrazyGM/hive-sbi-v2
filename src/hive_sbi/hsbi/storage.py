@@ -70,11 +70,11 @@ class TrxDB:
         table = self.db[self.__tablename__]
         return table.find_one(order_by="-index", share_type=share_type)
 
-    def get_SBD_transfer(self, account, shares, timestamp, SBD_symbol="SBD"):
+    def get_SBD_transfer(self, account, shares, timestamp, hbd_symbol="SBD"):
         """Returns all entries for given value"""
         table = self.db[self.__tablename__]
         found_trx = None
-        for trx in table.find(account=account, shares=-shares, share_type=SBD_symbol):
+        for trx in table.find(account=account, shares=-shares, share_type=hbd_symbol):
             if addTzInfo(trx["timestamp"]) < addTzInfo(timestamp):
                 found_trx = trx
         return found_trx

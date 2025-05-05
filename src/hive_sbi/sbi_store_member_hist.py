@@ -82,7 +82,7 @@ def run():
 
     node_list = nodes.get_nodes(hive=hive_blockchain)
     hv = Hive(node=node_list, num_retries=3, timeout=10)
-    # print(str(stm))
+    # print(str(hv))
     set_shared_blockchain_instance(hv)
 
     accountTrx = MemberHistDB(db)

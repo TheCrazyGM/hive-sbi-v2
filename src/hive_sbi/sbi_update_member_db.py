@@ -19,7 +19,7 @@ def memo_sp_delegation(
     sponsor,
     shares,
     sp_share_ratio,
-    STEEM_symbol="HIVE",
+    HIVE_symbol="HIVE",
 ):
     if "sp_delegation" not in transferMemos:
         return
@@ -48,13 +48,13 @@ def memo_sp_delegation(
             memo_text = transferMemos["sp_delegation"]["memo"] % shares
         else:
             memo_text = transferMemos["sp_delegation"]["memo"]
-        memo_transfer_acc.transfer(sponsor, 0.001, STEEM_symbol, memo=memo_text)
+        memo_transfer_acc.transfer(sponsor, 0.001, HIVE_symbol, memo=memo_text)
         sleep(4)
     except Exception as e:
-        print(f"Could not send 0.001 {STEEM_symbol} to {sponsor}: {str(e)}")
+        print(f"Could not send 0.001 {HIVE_symbol} to {sponsor}: {str(e)}")
 
 
-def memo_welcome(transferMemos, memo_transfer_acc, sponsor, STEEM_symbol="HIVE"):
+def memo_welcome(transferMemos, memo_transfer_acc, sponsor, HIVE_symbol="HIVE"):
     if "welcome" not in transferMemos:
         return
 
@@ -64,13 +64,13 @@ def memo_welcome(transferMemos, memo_transfer_acc, sponsor, STEEM_symbol="HIVE")
         return
     try:
         memo_text = transferMemos["welcome"]["memo"]
-        memo_transfer_acc.transfer(sponsor, 0.001, STEEM_symbol, memo=memo_text)
+        memo_transfer_acc.transfer(sponsor, 0.001, HIVE_symbol, memo=memo_text)
         sleep(4)
     except Exception as e:
-        print(f"Could not send 0.001 {STEEM_symbol} to {sponsor}: {str(e)}")
+        print(f"Could not send 0.001 {HIVE_symbol} to {sponsor}: {str(e)}")
 
 
-def memo_sponsoring(transferMemos, memo_transfer_acc, s, sponsor, STEEM_symbol="HIVE"):
+def memo_sponsoring(transferMemos, memo_transfer_acc, s, sponsor, HIVE_symbol="HIVE"):
     if "sponsoring" not in transferMemos:
         return
     if transferMemos["sponsoring"]["enabled"] == 0:
@@ -82,13 +82,13 @@ def memo_sponsoring(transferMemos, memo_transfer_acc, s, sponsor, STEEM_symbol="
             memo_text = transferMemos["sponsoring"]["memo"] % sponsor
         else:
             memo_text = transferMemos["sponsoring"]["memo"]
-        memo_transfer_acc.transfer(s, 0.001, STEEM_symbol, memo=memo_text)
+        memo_transfer_acc.transfer(s, 0.001, HIVE_symbol, memo=memo_text)
         sleep(4)
     except Exception as e:
-        print(f"Could not send 0.001 {STEEM_symbol} to {s}: {str(e)}")
+        print(f"Could not send 0.001 {HIVE_symbol} to {s}: {str(e)}")
 
 
-def memo_update_shares(transferMemos, memo_transfer_acc, sponsor, shares, STEEM_symbol="HIVE"):
+def memo_update_shares(transferMemos, memo_transfer_acc, sponsor, shares, HIVE_symbol="HIVE"):
     if "update_shares" not in transferMemos:
         return
     if transferMemos["update_shares"]["enabled"] == 0:
@@ -100,14 +100,14 @@ def memo_update_shares(transferMemos, memo_transfer_acc, sponsor, shares, STEEM_
             memo_text = transferMemos["update_shares"]["memo"] % shares
         else:
             memo_text = transferMemos["update_shares"]["memo"]
-        memo_transfer_acc.transfer(sponsor, 0.001, STEEM_symbol, memo=memo_text)
+        memo_transfer_acc.transfer(sponsor, 0.001, HIVE_symbol, memo=memo_text)
         sleep(4)
     except Exception as e:
-        print(f"Could not send 0.001 {STEEM_symbol} to {sponsor}: {str(e)}")
+        print(f"Could not send 0.001 {HIVE_symbol} to {sponsor}: {str(e)}")
 
 
 def memo_sponsoring_update_shares(
-    transferMemos, memo_transfer_acc, s, sponsor, shares, STEEM_symbol="HIVE"
+    transferMemos, memo_transfer_acc, s, sponsor, shares, HIVE_symbol="HIVE"
 ):
     if "sponsoring_update_shares" not in transferMemos:
         return
@@ -138,10 +138,10 @@ def memo_sponsoring_update_shares(
             memo_text = transferMemos["sponsoring_update_shares"]["memo"] % shares
         else:
             memo_text = transferMemos["sponsoring_update_shares"]["memo"]
-        memo_transfer_acc.transfer(s, 0.001, STEEM_symbol, memo=memo_text)
+        memo_transfer_acc.transfer(s, 0.001, HIVE_symbol, memo=memo_text)
         sleep(4)
     except Exception as e:
-        print(f"Could not send 0.001 {STEEM_symbol} to {s}: {str(e)}")
+        print(f"Could not send 0.001 {HIVE_symbol} to {s}: {str(e)}")
 
 
 def run():

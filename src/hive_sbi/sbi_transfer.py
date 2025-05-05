@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime, timezone
 
 from nectar import Hive
@@ -9,6 +10,7 @@ from nectar.utils import formatTimeString
 
 from hive_sbi.hsbi.member import Member
 from hive_sbi.hsbi.parse_hist_op import ParseAccountHist
+from hive_sbi.hsbi.storage import TransactionOutDB
 from hive_sbi.hsbi.transfer_ops_storage import AccountTrx
 
 
@@ -16,7 +18,7 @@ def run():
     from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
     from hive_sbi.hsbi.utils import measure_execution_time
 
-    start_prep_time = measure_execution_time()
+    start_prep_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -27,10 +29,9 @@ def run():
     # Setup storage objects
     storage = setup_storage_objects(db, db2)
 
-    # Get account storage
-    accountStorage = storage["accounts"]
-    accounts = accountStorage.get()
-    other_accounts = accountStorage.get_transfer()
+    # Get accounts
+    accounts = storage["accounts"]
+    other_accounts = storage["other_accounts"]
 
     # Get management shares and blockchain setting
     mgnt_shares = config_data.get("mgnt_shares", {})
@@ -45,16 +46,20 @@ def run():
             accountTrx[account] = AccountTrx(db, account)
 
     # Get storage objects
-    trxStorage = storage["trx"]
-    memberStorage = storage["member"]
-    keyStorage = storage["keys"]
-    transactionStorage = storage["trx_memo"]
-    transactionOutStorage = storage["trx_out"]
+    trxStorage = storage["trxStorage"]
+    memberStorage = storage["memberStorage"]
+    keyStorage = storage["keyStorage"]
+    transactionStorage = storage["transactionStorage"]
+    # Create TransactionOutDB instance as it's not available in the storage dictionary
+    transactionOutStorage = TransactionOutDB(db)
 
     # Get configuration
-    confStorage = storage["conf_setup"]
-    conf_setup = confStorage.get()
+    conf_setup = storage["conf_setup"]
     last_cycle = conf_setup["last_cycle"]
+    # Add timezone information to last_cycle if it's offset-naive
+    if last_cycle is not None and last_cycle.tzinfo is None:
+        from nectar.utils import addTzInfo
+        last_cycle = addTzInfo(last_cycle)
     share_cycle_min = conf_setup["share_cycle_min"]
 
     print(
@@ -81,7 +86,7 @@ def run():
         except Exception as e:
             print(f"could not update nodes: {str(e)}")
         hv = Hive(keys=key_list, node=nodes.get_nodes(hive=hive_blockchain))
-        # set_shared_blockchain_instance(stm)
+        # set_shared_blockchain_instance(hv)
 
         # print("load member database")
         member_accounts = memberStorage.get_all_accounts()
