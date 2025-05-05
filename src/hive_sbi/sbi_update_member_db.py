@@ -328,8 +328,8 @@ def run():
         # Add bonus shares from delegation
         for m in member_data:
             if m in delegation and delegation[m] > 0:
-                sp = hv.vests_to_sp(float(delegation[m]))
-                bonus_shares = int(sp / sp_share_ratio)
+                hp= hv.vests_to_hp(float(delegation[m]))
+                bonus_shares = int(hp/ sp_share_ratio)
                 member_data[m]["bonus_shares"] = bonus_shares
                 member_data[m]["sp_delegation_shares"] = bonus_shares
                 if delegation_timestamp[m] is not None:

@@ -143,11 +143,11 @@ class ParseAccountHist(list):
         delegated_sp_in = {}
         for acc in self.delegated_vests_in:
             vests = Amount(self.delegated_vests_in[acc])
-            delegated_sp_in[acc] = str(self.hive.vests_to_sp(vests))
+            delegated_sp_in[acc] = str(self.hive.vests_to_hp(vests))
         delegated_sp_out = {}
         for acc in self.delegated_vests_out:
             vests = Amount(self.delegated_vests_out[acc])
-            delegated_sp_out[acc] = str(self.hive.vests_to_sp(vests))
+            delegated_sp_out[acc] = str(self.hive.vests_to_hp(vests))
 
         if self.path is None:
             return
@@ -189,7 +189,7 @@ class ParseAccountHist(list):
         if amount.symbol == self.hive.hbd_symbol:
             # self.trxStorage.get_account(op["to"], share_type="SBD")
             shares = -int(amount.amount)
-            if "http" in op["memo"] or self.hive.steem_symbol not in op["memo"]:
+            if "http" in op["memo"] or self.hive.hive_symbol not in op["memo"]:
                 data = {
                     "index": index,
                     "sender": account,
@@ -310,6 +310,35 @@ class ParseAccountHist(list):
 
         if sponsee_amount == 0 and not account_error and True:
             sponsee_account = self.get_highest_avg_share_age_account()
+            # Check if sponsee_account is None before proceeding
+            if sponsee_account is None:
+                # No eligible account found, handle this case
+                sponsee = {}
+                message = (
+                    op["timestamp"]
+                    + " to: "
+                    + self.account["name"]
+                    + " from: "
+                    + sponsor
+                    + " amount: "
+                    + str(amount)
+                    + " memo: "
+                    + processed_memo
+                    + "\n"
+                )
+                self.new_transfer_record(
+                    index,
+                    processed_memo,
+                    account,
+                    sponsor,
+                    json.dumps(sponsee),
+                    shares,
+                    timestamp,
+                    status="NoEligibleSponsee",
+                    share_type=share_type,
+                )
+                return
+            # If we get here, sponsee_account is not None
             sponsee = {sponsee_account: shares}
             print("%s sponsers %s with %d shares" % (sponsor, sponsee_account, shares))
             self.new_transfer_record(

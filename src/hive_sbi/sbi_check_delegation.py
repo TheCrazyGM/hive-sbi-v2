@@ -105,7 +105,7 @@ def run():
 
         for d in sorted_delegation_list:
             if d["share_type"] == "Delegation":
-                delegation[d["account"]] = hv.vests_to_sp(float(d["vests"]))
+                delegation[d["account"]] = hv.vests_to_hp(float(d["vests"]))
                 delegation_timestamp[d["account"]] = d["timestamp"]
                 delegation_shares[d["account"]] = d["shares"]
             elif d["share_type"] == "DelegationLeased":
