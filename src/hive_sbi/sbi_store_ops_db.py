@@ -8,7 +8,7 @@ from nectar.amount import Amount
 from nectar.nodelist import NodeList
 from nectar.utils import formatTimeString
 
-from hive_sbi.hsbi.transfer_ops_storage import AccountTrx
+from hive_sbi.hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
 
 def get_account_trx_data(account, start_block, start_index):
@@ -207,8 +207,8 @@ def run():
                 accountTrx[account_name].add_batch(data_batch)
                 data_batch = []
 
-        # Process other accounts using the trxStorage from the storage objects
-        transferTrxStorage = storage["transfer_trx"]
+        # Process other accounts using a new TransferTrx instance
+        transferTrxStorage = TransferTrx(db)
 
         for account in other_accounts:
             account = Account(account, blockchain_instance=hv)
