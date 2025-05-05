@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime
 
 from nectar import Hive
@@ -148,7 +149,7 @@ def run():
     """
     Run the account fixing utility
     """
-    start_time = measure_execution_time()
+    start_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -160,8 +161,8 @@ def run():
     storage = setup_storage_objects(db, db2)
 
     # Get storage objects
-    memberStorage = storage["member"]
-    accountStorage = storage["accounts"]
+    memberStorage = storage["memberStorage"]
+    accountStorage = storage["accountStorage"]
 
     # Get blockchain setting
     hive_blockchain = config_data.get("hive_blockchain", True)
