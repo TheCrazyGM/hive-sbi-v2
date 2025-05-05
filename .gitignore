@@ -77,3 +77,4 @@ data/
 
 # Old Files use for refence
 hive-sbi-v2/
+data/sbi2.db-shm
