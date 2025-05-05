@@ -26,6 +26,12 @@ class TrxDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get_all_data(self):
         """Returns the public keys stored in the database"""
         return self.db[self.__tablename__].all()
@@ -176,6 +182,12 @@ class MemberDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get_all_data(self):
         """Returns the public keys stored in the database"""
         return self.db[self.__tablename__].all()
@@ -280,6 +292,12 @@ class ConfigurationDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get(self):
         """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
@@ -336,6 +354,12 @@ class BlacklistDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get(self):
         """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
@@ -378,6 +402,12 @@ class AccountsDB:
             return True
         else:
             return False
+
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
 
     def get(self):
         """Returns the accounts stored in the database"""
@@ -472,6 +502,12 @@ class KeysDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get(self, account, key_type):
         """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
@@ -516,6 +552,12 @@ class TransferMemoDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get(self, memo_type):
         """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
@@ -542,6 +584,12 @@ class TransactionMemoDB:
             return True
         else:
             return False
+
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
 
     def get_all_data(self):
         """Returns the public keys stored in the database"""
@@ -652,6 +700,12 @@ class TransactionOutDB:
         else:
             return False
 
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
+
     def get_all_data(self):
         """Returns the public keys stored in the database"""
         return self.db[self.__tablename__].all()
@@ -729,6 +783,12 @@ class PendingRefundDB:
             return True
         else:
             return False
+
+    def create_table(self):
+        """Create the keys table if it doesn't exist"""
+        if not self.exists_table():
+            # Create the table
+            self.db.create_table(self.__tablename__)
 
     def get_all_data(self):
         """Returns the public keys stored in the database"""
