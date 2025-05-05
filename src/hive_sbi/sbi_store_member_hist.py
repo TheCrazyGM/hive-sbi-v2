@@ -1,9 +1,6 @@
-import json
-import os
 import time
 from datetime import datetime, timedelta, timezone
 
-import dataset
 from nectar import Hive
 from nectar.blockchain import Blockchain
 from nectar.comment import Comment
@@ -12,40 +9,38 @@ from nectar.nodelist import NodeList
 from nectar.utils import addTzInfo, construct_authorperm, formatTimeString
 from nectar.vote import Vote
 
+from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
 from hive_sbi.hsbi.member import Member
-from hive_sbi.hsbi.storage import AccountsDB, ConfigurationDB, MemberDB, TrxDB
-from hive_sbi.hsbi.transfer_ops_storage import (
-    CurationOptimizationTrx,
-    MemberHistDB,
-)
+from hive_sbi.hsbi.transfer_ops_storage import CurationOptimizationTrx, MemberHistDB
+from hive_sbi.hsbi.utils import measure_execution_time
 
 
 def run():
-    config_file = "config.json"
-    if not os.path.isfile(config_file):
-        raise Exception("config.json is missing!")
-    else:
-        with open(config_file) as json_data_file:
-            config_data = json.load(json_data_file)
-        # print(config_data)
-        databaseConnector = config_data["databaseConnector"]
-        databaseConnector2 = config_data["databaseConnector2"]
-        hive_blockchain = config_data["hive_blockchain"]
+    start_prep_time = measure_execution_time()
 
-    # sqlDataBaseFile = os.path.join(path, database)
-    # databaseConnector = "sqlite:///" + sqlDataBaseFile
-    start_prep_time = time.time()
-    db2 = dataset.connect(databaseConnector2)
+    # Load configuration
+    config_data = load_config()
 
-    accountStorage = AccountsDB(db2)
+    # Setup database connections
+    db, db2 = setup_database_connections(config_data)
+
+    # Setup storage objects
+    storage = setup_storage_objects(db, db2)
+
+    # Get account storage
+    accountStorage = storage["accounts"]
     accounts = accountStorage.get()
     other_accounts = accountStorage.get_transfer()
 
-    # Create keyStorage
-    trxStorage = TrxDB(db2)
-    memberStorage = MemberDB(db2)
-    confStorage = ConfigurationDB(db2)
+    # Get storage objects
+    trxStorage = storage["trx"]
+    memberStorage = storage["member"]
+    confStorage = storage["conf_setup"]
 
+    # Get blockchain setting
+    hive_blockchain = config_data.get("hive_blockchain", True)
+
+    # Get configuration settings
     conf_setup = confStorage.get()
 
     last_cycle = conf_setup["last_cycle"]
@@ -75,7 +70,6 @@ def run():
 
     updated_member_data = []
 
-    db = dataset.connect(databaseConnector)
     curationOptimTrx = CurationOptimizationTrx(db)
     curationOptimTrx.delete_old_posts(days=7)
     # Update current node list from @fullnodeupdate
@@ -91,7 +85,6 @@ def run():
     # print(str(stm))
     set_shared_blockchain_instance(hv)
 
-    accountTrx = {}
     accountTrx = MemberHistDB(db)
 
     b = Blockchain(blockchain_instance=hv)
@@ -306,8 +299,9 @@ def run():
             vote_cnt = 0
             last_block_num = block_num
 
-            db = dataset.connect(databaseConnector)
-            db2 = dataset.connect(databaseConnector2)
+            db_hist_follow = db
+            db_hist = db
+            db2_hist = db2
             accountTrx.db = db
             curationOptimTrx.db = db
             memberStorage.db = db2
@@ -324,12 +318,12 @@ def run():
         cnt += 1
     if len(db_data) > 0:
         print(op["timestamp"])
-        db = dataset.connect(databaseConnector)
+        # Use existing database connection instead of creating a new one
         accountTrx.db = db
         accountTrx.add_batch(db_data)
         db_data = []
     if len(updated_member_data) > 0:
-        db2 = dataset.connect(databaseConnector2)
+        # Use existing database connection instead of creating a new one
         memberStorage.db = db2
         memberStorage.add_batch(updated_member_data)
         updated_member_data = []
@@ -342,12 +336,12 @@ def run():
         )
 
     if len(curation_vote_list) > 0:
-        db = dataset.connect(databaseConnector)
+        # Use existing database connection instead of creating a new one
         curationOptimTrx.db = db
         curationOptimTrx.add_batch(curation_vote_list)
         curation_vote_list = []
 
-    print("member hist script run %.2f s" % (time.time() - start_prep_time))
+    print(f"member hist script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

@@ -14,31 +14,21 @@ from hive_sbi.hsbi.transfer_ops_storage import AccountTrx
 def get_account_trx_data(account, start_block, start_index):
     # Go through all transfer ops
     if start_block is not None:
-        # Check if start_block is a dictionary or an integer
-        if isinstance(start_block, dict):
-            trx_in_block = start_block["trx_in_block"]
-            op_in_trx = start_block["op_in_trx"]
-            virtual_op = start_block["virtual_op"]
-            block_num = start_block["block"]
-            print("account %s - %d" % (account["name"], block_num))
-        else:
-            # start_block is already a block number
-            block_num = start_block
-            trx_in_block = 0
-            op_in_trx = 0
-            virtual_op = False
-            print("account %s - %d" % (account["name"], block_num))
+        trx_in_block = start_block["trx_in_block"]
+        op_in_trx = start_block["op_in_trx"]
+        virtual_op = start_block["virtual_op"]
+        start_block = start_block["block"]
+
+        print("account %s - %d" % (account["name"], start_block))
     else:
-        block_num = 0
+        start_block = 0
         trx_in_block = 0
         op_in_trx = 0
-        virtual_op = False
+        virtual_op = 0
 
-    # Check if start_index is a dictionary or an integer
     if start_index is not None:
-        if isinstance(start_index, dict) and "op_acc_index" in start_index:
-            start_index = start_index["op_acc_index"] + 1
-        # If it's already an integer, use it as is
+        start_index = start_index["op_acc_index"] + 1
+        # print("account %s - %d" % (account["name"], start_index))
     else:
         start_index = 0
 
@@ -194,7 +184,7 @@ def run():
                 account_name = "sbi"
             else:
                 account = Account(account_name, blockchain_instance=hv)
-            start_block = accountTrx[account_name].get_latest_block_num()
+            start_block = accountTrx[account_name].get_latest_block()
             start_index = (
                 accountTrx[account_name].get_latest_trx_index(start_block)
                 if start_block is not None
@@ -203,13 +193,16 @@ def run():
 
             data = get_account_trx_data(account, start_block, start_index)
 
-            # Process data in batches of 1000 transactions
-            batch_size = 1000
-            for i in range(0, len(data), batch_size):
-                data_batch = data[i : i + batch_size]
-                if data_batch:
+            # Process data using the same approach as the original code
+            data_batch = []
+            for cnt in range(0, len(data)):
+                data_batch.append(data[cnt])
+                if cnt % 1000 == 0 and cnt > 0:
                     accountTrx[account_name].add_batch(data_batch)
-                    print(f"Added batch of {len(data_batch)} transactions for {account_name}")
+                    data_batch = []
+            if len(data_batch) > 0:
+                accountTrx[account_name].add_batch(data_batch)
+                data_batch = []
 
         # Process other accounts using the trxStorage from the storage objects
         transferTrxStorage = storage["transfer_trx"]
@@ -220,13 +213,16 @@ def run():
 
             data = get_account_trx_storage_data(account, start_index, hv)
 
-            # Process data in batches of 1000 transactions
-            batch_size = 1000
-            for i in range(0, len(data), batch_size):
-                data_batch = data[i : i + batch_size]
-                if data_batch:
+            # Process data using the same approach as the original code
+            data_batch = []
+            for cnt in range(0, len(data)):
+                data_batch.append(data[cnt])
+                if cnt % 1000 == 0 and cnt > 0:
                     transferTrxStorage.add_batch(data_batch)
-                    print(f"Added batch of {len(data_batch)} transactions for {account['name']}")
+                    data_batch = []
+            if len(data_batch) > 0:
+                transferTrxStorage.add_batch(data_batch)
+                data_batch = []
         print(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
 
 

@@ -72,3 +72,6 @@ config.json
 *.db
 *.db-journal
 *.db-wal
+
+# Old Files use for refence
+hive-sbi-v2/
