@@ -72,6 +72,7 @@ config.json
 *.db
 *.db-journal
 *.db-wal
+*.db-shm
 
 # Old Files use for refence
 hive-sbi-v2/

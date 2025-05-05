@@ -27,7 +27,10 @@ def get_account_trx_data(account, start_block, start_index):
         virtual_op = 0
 
     if start_index is not None:
-        start_index = start_index["op_acc_index"] + 1
+        # Check if start_index is a dictionary or an integer
+        if isinstance(start_index, dict) and "op_acc_index" in start_index:
+            start_index = start_index["op_acc_index"] + 1
+        # If it's already an integer, we can use it directly
         # print("account %s - %d" % (account["name"], start_index))
     else:
         start_index = 0
@@ -186,7 +189,7 @@ def run():
                 account = Account(account_name, blockchain_instance=hv)
             start_block = accountTrx[account_name].get_latest_block()
             start_index = (
-                accountTrx[account_name].get_latest_trx_index(start_block)
+                accountTrx[account_name].get_latest_index()
                 if start_block is not None
                 else 0
             )
