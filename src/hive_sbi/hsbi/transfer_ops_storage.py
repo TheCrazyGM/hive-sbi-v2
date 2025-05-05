@@ -44,9 +44,7 @@ class AccountTrx:
     def get_newest(self, timestamp, op_types=[], limit=100):
         ops = []
         table = self.db[self.__tablename__]
-        for op in table.find(
-            table.table.columns.timestamp > timestamp, order_by="-op_acc_index"
-        ):
+        for op in table.find(table.table.columns.timestamp > timestamp, order_by="-op_acc_index"):
             if op["type"] in op_types or len(op_types) == 0:
                 ops.append(op)
             if len(ops) >= limit:
@@ -112,9 +110,7 @@ class TransferTrx:
 
     def find(self, memo, to):
         table = self.db[self.__tablename__].table
-        statement = table.select(
-            and_(table.c.memo.like("%" + memo + "%"), table.c.to == to)
-        )
+        statement = table.select(and_(table.c.memo.like("%" + memo + "%"), table.c.to == to))
         result = self.db.query(statement)
         ret = []
         for r in result:
@@ -368,17 +364,13 @@ class PostsTrx:
     def get_unvoted_post(self):
         table = self.db[self.__tablename__]
         posts = {}
-        for post in table.find(
-            voted=False, skip=False, comment_to_old=False, order_by="created"
-        ):
+        for post in table.find(voted=False, skip=False, comment_to_old=False, order_by="created"):
             posts[post["authorperm"]] = post
         return posts
 
     def update_voted(self, author, created, voted, voted_after=900):
         table = self.db[self.__tablename__]
-        data = dict(
-            author=author, created=created, voted=voted, voted_after=voted_after
-        )
+        data = dict(author=author, created=created, voted=voted, voted_after=voted_after)
         table.update(data, ["author", "created"])
 
     def update_skip(self, author, created, skip):

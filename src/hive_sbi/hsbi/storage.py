@@ -88,9 +88,7 @@ class TrxDB:
         """Change share_age depending on timestamp"""
         table = self.db[self.__tablename__]
         found_trx = None
-        for trx in table.find(
-            source=source, account=account, share_type=share_type_old
-        ):
+        for trx in table.find(source=source, account=account, share_type=share_type_old):
             found_trx = trx
         data = dict(index=found_trx["index"], source=source, share_type=share_type_new)
         table.update(data, ["index", "source"])
@@ -110,9 +108,7 @@ class TrxDB:
         found_trx = None
         for trx in table.find(source=source, account=account, memo=memo):
             found_trx = trx
-        data = dict(
-            index=found_trx["index"], source=source, sponsee=sponsee, status=status
-        )
+        data = dict(index=found_trx["index"], source=source, sponsee=sponsee, status=status)
         table.update(data, ["index", "source"])
 
     def update_sponsee_index(self, index, source, sponsee, status):

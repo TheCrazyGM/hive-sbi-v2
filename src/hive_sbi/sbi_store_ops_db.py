@@ -195,23 +195,21 @@ def run():
             else:
                 account = Account(account_name, blockchain_instance=hv)
             start_block = accountTrx[account_name].get_latest_block_num()
-            start_index = accountTrx[account_name].get_latest_trx_index(start_block) if start_block is not None else 0
+            start_index = (
+                accountTrx[account_name].get_latest_trx_index(start_block)
+                if start_block is not None
+                else 0
+            )
 
             data = get_account_trx_data(account, start_block, start_index)
 
-            data_batch = []
-            for cnt in range(0, len(data)):
-                data_batch.append(data[cnt])
-                if cnt % 1000 == 0:
-                    # Add each transaction individually since add_batch is not available
-                    for trx in data_batch:
-                        accountTrx[account_name].add(trx)
-                    data_batch = []
-            if len(data_batch) > 0:
-                # Add each transaction individually since add_batch is not available
-                for trx in data_batch:
-                    accountTrx[account_name].add(trx)
-                data_batch = []
+            # Process data in batches of 1000 transactions
+            batch_size = 1000
+            for i in range(0, len(data), batch_size):
+                data_batch = data[i : i + batch_size]
+                if data_batch:
+                    accountTrx[account_name].add_batch(data_batch)
+                    print(f"Added batch of {len(data_batch)} transactions for {account_name}")
 
         # Process other accounts using the trxStorage from the storage objects
         transferTrxStorage = storage["transfer_trx"]
@@ -222,19 +220,13 @@ def run():
 
             data = get_account_trx_storage_data(account, start_index, hv)
 
-            data_batch = []
-            for cnt in range(0, len(data)):
-                data_batch.append(data[cnt])
-                if cnt % 1000 == 0:
-                    # Add each transaction individually since add_batch is not available
-                    for trx in data_batch:
-                        transferTrxStorage.add(trx)
-                    data_batch = []
-            if len(data_batch) > 0:
-                # Add each transaction individually since add_batch is not available
-                for trx in data_batch:
-                    transferTrxStorage.add(trx)
-                data_batch = []
+            # Process data in batches of 1000 transactions
+            batch_size = 1000
+            for i in range(0, len(data), batch_size):
+                data_batch = data[i : i + batch_size]
+                if data_batch:
+                    transferTrxStorage.add_batch(data_batch)
+                    print(f"Added batch of {len(data_batch)} transactions for {account['name']}")
         print(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
 
 

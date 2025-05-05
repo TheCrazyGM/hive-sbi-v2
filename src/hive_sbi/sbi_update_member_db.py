@@ -5,16 +5,12 @@ from time import sleep
 from nectar import Hive
 from nectar.account import Account
 from nectar.nodelist import NodeList
-from nectar.utils import addTzInfo, formatTimeString
+from nectar.utils import formatTimeString
 
+from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
 from hive_sbi.hsbi.member import Member
-from hive_sbi.hsbi.transfer_ops_storage import AccountTrx, TransferTrx
-from hive_sbi.hsbi.utils import (
-    load_config,
-    measure_execution_time,
-    setup_database_connections,
-    setup_storage_objects,
-)
+from hive_sbi.hsbi.transfer_ops_storage import TransferTrx
+from hive_sbi.hsbi.utils import measure_execution_time
 
 
 def memo_sp_delegation(
@@ -120,9 +116,10 @@ def memo_sponsoring_update_shares(
     if memo_transfer_acc is None:
         return
     try:
-        if "%s" in transferMemos["sponsoring_update_shares"]["memo"] and "%d" in transferMemos[
-            "sponsoring_update_shares"
-        ]["memo"]:
+        if (
+            "%s" in transferMemos["sponsoring_update_shares"]["memo"]
+            and "%d" in transferMemos["sponsoring_update_shares"]["memo"]
+        ):
             if transferMemos["sponsoring_update_shares"]["memo"].find("%s") < transferMemos[
                 "sponsoring_update_shares"
             ]["memo"].find("%d"):
@@ -224,7 +221,7 @@ def run():
                     "pub": db_entry["pub"],
                     "wif": db_entry["wif"],
                     "memo": db_entry["memo"],
-                }
+                },
             )
         # Get memo transfer account
         memo_transfer_acc = accountStorage.get_transfer_memo_sender()

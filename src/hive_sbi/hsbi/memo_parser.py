@@ -70,9 +70,7 @@ class MemoParser:
                     continue
                 elif w[:21] == "https://steemit.com/@" and "/" not in w[21:]:
                     try:
-                        account_name = (
-                            w[21:].replace("!", "").replace('"', "").replace(";", "")
-                        )
+                        account_name = w[21:].replace("!", "").replace('"', "").replace(";", "")
                         if account_name[0] == "'":
                             account_name = account_name[1:]
                         if account_name[-1] == "'":
@@ -118,9 +116,7 @@ class MemoParser:
                         account_error = True
                 elif w[0] == "@":
                     try:
-                        account_name = (
-                            w[1:].replace("!", "").replace('"', "").replace(";", "")
-                        )
+                        account_name = w[1:].replace("!", "").replace('"', "").replace(";", "")
                         if account_name[0] == "'":
                             account_name = account_name[1:]
                         if account_name[-1] == "'":
@@ -139,10 +135,7 @@ class MemoParser:
                 elif len(w.split("@")) > 1:
                     try:
                         account_name = (
-                            w.replace("!", "")
-                            .replace('"', "")
-                            .replace(";", "")
-                            .split("@")[1]
+                            w.replace("!", "").replace('"', "").replace(";", "").split("@")[1]
                         )
                         if account_name[0] == "'":
                             account_name = account_name[1:]
@@ -221,12 +214,7 @@ class MemoParser:
         if len(sponsors) == 1 and shares > 1 and no_numbers:
             for a in sponsors:
                 sponsors[a] = shares
-        elif (
-            len(sponsors) == 1
-            and shares > 1
-            and not no_numbers
-            and digit_found is not None
-        ):
+        elif len(sponsors) == 1 and shares > 1 and not no_numbers and digit_found is not None:
             for a in sponsors:
                 sponsors[a] = digit_found
         elif len(sponsors) > 0 and shares % len(sponsors) == 0 and no_numbers:

@@ -158,16 +158,10 @@ class ParseAccountHist(list):
         account = op["from"]
         timestamp = op["timestamp"]
         encrypted = False
-        processed_memo = (
-            ascii(op["memo"]).replace("\n", "").replace("\\n", "").replace("\\", "")
-        )
+        processed_memo = ascii(op["memo"]).replace("\n", "").replace("\\n", "").replace("\\", "")
         if (
             len(processed_memo) > 2
-            and (
-                processed_memo[0] == "#"
-                or processed_memo[1] == "#"
-                or processed_memo[2] == "#"
-            )
+            and (processed_memo[0] == "#" or processed_memo[1] == "#" or processed_memo[2] == "#")
             and account == "steembasicincome"
         ):
             if processed_memo[1] == "#":
@@ -265,16 +259,10 @@ class ParseAccountHist(list):
         account = op["from"]
         timestamp = op["timestamp"]
         sponsee = {}
-        processed_memo = (
-            ascii(op["memo"]).replace("\n", "").replace("\\n", "").replace("\\", "")
-        )
+        processed_memo = ascii(op["memo"]).replace("\n", "").replace("\\n", "").replace("\\", "")
         if (
             len(processed_memo) > 2
-            and (
-                processed_memo[0] == "#"
-                or processed_memo[1] == "#"
-                or processed_memo[2] == "#"
-            )
+            and (processed_memo[0] == "#" or processed_memo[1] == "#" or processed_memo[2] == "#")
             and account == "steembasicincome"
         ):
             if processed_memo[1] == "#":
@@ -296,8 +284,8 @@ class ParseAccountHist(list):
                 timestamp,
             )
             return
-        [sponsor, sponsee, not_parsed_words, account_error] = (
-            self.memo_parser.parse_memo(processed_memo, shares, account)
+        [sponsor, sponsee, not_parsed_words, account_error] = self.memo_parser.parse_memo(
+            processed_memo, shares, account
         )
         if amount.amount < 1:
             data = {
@@ -368,10 +356,7 @@ class ParseAccountHist(list):
             sponsee_shares = shares - sponsee_amount
             if sponsee_shares > 0 and sponsee_account is not None:
                 sponsee = {sponsee_account: sponsee_shares}
-                print(
-                    "%s sponsers %s with %d shares"
-                    % (sponsor, sponsee_account, sponsee_shares)
-                )
+                print("%s sponsers %s with %d shares" % (sponsor, sponsee_account, sponsee_shares))
                 self.new_transfer_record(
                     index,
                     processed_memo,
@@ -524,16 +509,10 @@ class ParseAccountHist(list):
         elif op["type"] == "transfer":
             amount = Amount(op["amount"], blockchain_instance=self.steem)
             # print(op)
-            if (
-                op["from"] == self.account["name"]
-                and op["to"] not in self.excluded_accounts
-            ):
+            if op["from"] == self.account["name"] and op["to"] not in self.excluded_accounts:
                 self.parse_transfer_out_op(op)
 
-            if (
-                op["to"] == self.account["name"]
-                and op["from"] not in self.excluded_accounts
-            ):
+            if op["to"] == self.account["name"] and op["from"] not in self.excluded_accounts:
                 self.parse_transfer_in_op(op)
 
             # print(op, vests)
