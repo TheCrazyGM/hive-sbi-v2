@@ -52,7 +52,7 @@ def reset_database():
     keys_db = KeysDB(db2)
     keys_db.create_table()
     for key in keys:
-        keys_db.add(key["account"], key["key_type"], key["wif"], key["pub_key"])
+        keys_db.add(key["account"], key["key_type"], key["wif"])
 
     # Initialize the database with empty tables
     accounts_db = AccountsDB(db2)
@@ -75,10 +75,7 @@ def reset_database():
             "mgnt_shares",
         ]:
             # Convert string datetime values to datetime objects
-            if (
-                key in ["last_cycle", "last_paid_post", "last_paid_comment"]
-                and value is not None
-            ):
+            if key in ["last_cycle", "last_paid_post", "last_paid_comment"] and value is not None:
                 if isinstance(value, str):
                     try:
                         value = addTzInfo(parse(value))

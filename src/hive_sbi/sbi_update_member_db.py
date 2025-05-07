@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime, timedelta, timezone
 from time import sleep
 
@@ -146,7 +147,8 @@ def memo_sponsoring_update_shares(
 
 def run():
     """Run the update member database module"""
-    start_time = measure_execution_time()
+
+    start_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -159,13 +161,13 @@ def run():
 
     # Get storage objects
     transferStorage = TransferTrx(db)
-    trxStorage = storage["trx"]
-    keyStorage = storage["keys"]
-    memberStorage = storage["members"]
-    confStorage = storage["conf"]
-    transactionStorage = storage["transactions"]
-    transferMemosStorage = storage["transfer_memos"]
-    accountStorage = storage["accounts"]
+    trxStorage = storage["trxStorage"]
+    keyStorage = storage["keyStorage"]
+    memberStorage = storage["memberStorage"]
+    confStorage = storage["confStorage"]
+    transactionStorage = storage["transactionStorage"]
+    transferMemosStorage = storage["transferMemosStorage"]
+    accountStorage = storage["accountStorage"]
 
     # Get configuration values
     accounts = accountStorage.get()
@@ -177,6 +179,35 @@ def run():
     conf_setup = confStorage.get()
 
     last_cycle = conf_setup["last_cycle"]
+    
+    # Ensure last_cycle has timezone info
+    if last_cycle is not None:
+        if isinstance(last_cycle, str):
+            from nectar.utils import addTzInfo
+            
+            # Try to parse the datetime string directly instead of using formatTimeString
+            try:
+                # Try ISO format first (2025-01-01T00:00:00)
+                last_cycle = datetime.fromisoformat(last_cycle)
+            except ValueError:
+                try:
+                    # Try with space instead of T (2025-01-01 00:00:00)
+                    last_cycle = datetime.strptime(last_cycle, '%Y-%m-%d %H:%M:%S%z')
+                except ValueError:
+                    try:
+                        # Try without timezone (2025-01-01 00:00:00)
+                        last_cycle = datetime.strptime(last_cycle, '%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        # Fall back to original method as last resort
+                        # Using the globally imported formatTimeString
+                        last_cycle = formatTimeString(last_cycle)
+            
+            # Ensure timezone info is added if needed
+            if last_cycle.tzinfo is None:
+                last_cycle = addTzInfo(last_cycle)
+        elif last_cycle.tzinfo is None:
+            from nectar.utils import addTzInfo
+            last_cycle = addTzInfo(last_cycle)
     share_cycle_min = conf_setup["share_cycle_min"]
     sp_share_ratio = conf_setup["sp_share_ratio"]
     rshares_per_cycle = conf_setup["rshares_per_cycle"]
@@ -211,7 +242,8 @@ def run():
         hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
 
         # Get memo transfer account key
-        transferMemos = transferMemosStorage.get()
+        # Using get_all_data() instead of get() since get() requires a memo_type parameter
+        transferMemos = transferMemosStorage.get_all_data()
         db_entry = keyStorage.get("steembasicincome", "memo")
         if db_entry is not None:
             keyStorage.update(
@@ -227,13 +259,16 @@ def run():
         memo_transfer_acc = accountStorage.get_transfer_memo_sender()
         if len(memo_transfer_acc) > 0:
             memo_transfer_acc = memo_transfer_acc[0]
-        if memo_transfer_acc is not None:
-            try:
-                memo_transfer_acc = Account(memo_transfer_acc, blockchain_instance=hv)
-            except Exception as e:
-                print(
-                    f"{memo_transfer_acc} is not a valid Hive account! Will NOT be able to send transfer memos: {str(e)}"
-                )
+            if memo_transfer_acc is not None:
+                try:
+                    memo_transfer_acc = Account(memo_transfer_acc, blockchain_instance=hv)
+                except Exception as e:
+                    print(
+                        f"{memo_transfer_acc} is not a valid Hive account! Will NOT be able to send transfer memos: {str(e)}"
+                    )
+        else:
+            print("No transfer memo sender account found in the database")
+            memo_transfer_acc = None
 
         member_data = {}
         share_age_member = {}
@@ -254,8 +289,12 @@ def run():
 
         shares_sum = 0
         latest_share = trxStorage.get_lastest_share_type("Mgmt")
-        mngt_shares_sum = (latest_share["index"] + 1) / len(mgnt_shares) * 100
-        print(f"Management shares sum: {int(mngt_shares_sum)}")
+        if latest_share is None:
+            print("No management shares found in the database")
+            mngt_shares_sum = 0
+        else:
+            mngt_shares_sum = (latest_share["index"] + 1) / len(mgnt_shares) * 100
+            print(f"Management shares sum: {int(mngt_shares_sum)}")
         latest_data_timestamp = None
 
         for op in data:
@@ -328,8 +367,8 @@ def run():
         # Add bonus shares from delegation
         for m in member_data:
             if m in delegation and delegation[m] > 0:
-                hp= hv.vests_to_hp(float(delegation[m]))
-                bonus_shares = int(hp/ sp_share_ratio)
+                hp = hv.vests_to_hp(float(delegation[m]))
+                bonus_shares = int(hp / sp_share_ratio)
                 member_data[m]["bonus_shares"] = bonus_shares
                 member_data[m]["sp_delegation_shares"] = bonus_shares
                 if delegation_timestamp[m] is not None:

@@ -448,7 +448,7 @@ class AccountsDB:
         table = self.db[self.__tablename__]
         accounts = []
         for a in table.all():
-            if a["transfer_memo_sender"] == 1:
+            if "transfer_memo_sender" in a and a["transfer_memo_sender"] == 1:
                 accounts.append(a["name"])
         return accounts
 
@@ -512,6 +512,18 @@ class KeysDB:
         """Returns the public keys stored in the database"""
         table = self.db[self.__tablename__]
         return table.find_one(account=account, key_type=key_type)
+
+    def add(self, account, key_type, wif):
+        """Add a key to the database
+
+        :param str account: Account name
+        :param str key_type: Type of key (posting, active)
+        :param str wif: Private key in WIF format
+        """
+        table = self.db[self.__tablename__]
+        data = {"account": account, "key_type": key_type, "wif": wif}
+        table.insert(data)
+        self.db.commit()
 
     def delete(self, account):
         """Delete a data set

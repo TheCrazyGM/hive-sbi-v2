@@ -36,6 +36,10 @@ class Member(dict):
     def append_share_age(self, timestamp, shares):
         if shares == 0:
             return
+        # Ensure timestamp has timezone information
+        if timestamp.tzinfo is None:
+            # Add UTC timezone to naive datetime
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
         age = (datetime.now(timezone.utc)) - (timestamp)
         share_age = int(age.total_seconds() / 60 / 60 / 24)
         self.share_age_list.append(share_age)
