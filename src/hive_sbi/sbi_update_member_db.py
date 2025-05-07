@@ -179,12 +179,12 @@ def run():
     conf_setup = confStorage.get()
 
     last_cycle = conf_setup["last_cycle"]
-    
+
     # Ensure last_cycle has timezone info
     if last_cycle is not None:
         if isinstance(last_cycle, str):
             from nectar.utils import addTzInfo
-            
+
             # Try to parse the datetime string directly instead of using formatTimeString
             try:
                 # Try ISO format first (2025-01-01T00:00:00)
@@ -192,21 +192,22 @@ def run():
             except ValueError:
                 try:
                     # Try with space instead of T (2025-01-01 00:00:00)
-                    last_cycle = datetime.strptime(last_cycle, '%Y-%m-%d %H:%M:%S%z')
+                    last_cycle = datetime.strptime(last_cycle, "%Y-%m-%d %H:%M:%S%z")
                 except ValueError:
                     try:
                         # Try without timezone (2025-01-01 00:00:00)
-                        last_cycle = datetime.strptime(last_cycle, '%Y-%m-%d %H:%M:%S')
+                        last_cycle = datetime.strptime(last_cycle, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
                         # Fall back to original method as last resort
                         # Using the globally imported formatTimeString
                         last_cycle = formatTimeString(last_cycle)
-            
+
             # Ensure timezone info is added if needed
             if last_cycle.tzinfo is None:
                 last_cycle = addTzInfo(last_cycle)
         elif last_cycle.tzinfo is None:
             from nectar.utils import addTzInfo
+
             last_cycle = addTzInfo(last_cycle)
     share_cycle_min = conf_setup["share_cycle_min"]
     sp_share_ratio = conf_setup["sp_share_ratio"]

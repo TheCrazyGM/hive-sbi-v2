@@ -189,9 +189,7 @@ def run():
                 account = Account(account_name, blockchain_instance=hv)
             start_block = accountTrx[account_name].get_latest_block()
             start_index = (
-                accountTrx[account_name].get_latest_index()
-                if start_block is not None
-                else 0
+                accountTrx[account_name].get_latest_index() if start_block is not None else 0
             )
 
             data = get_account_trx_data(account, start_block, start_index)

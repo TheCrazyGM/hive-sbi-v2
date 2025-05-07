@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
+from datetime import timezone
 
 from nectar import Hive
 from nectar.instance import set_shared_blockchain_instance
 from nectar.nodelist import NodeList
-from nectar.utils import addTzInfo, formatTimeString
 
 from hive_sbi.hsbi.transfer_ops_storage import TransferTrx
 
@@ -44,9 +43,10 @@ def run():
     # Ensure last_cycle has timezone info
     if last_cycle is not None:
         if isinstance(last_cycle, str):
-            from nectar.utils import addTzInfo
             from datetime import datetime
-            
+
+            from nectar.utils import addTzInfo
+
             # Try to parse the datetime string directly instead of using formatTimeString
             try:
                 # Try ISO format first (2025-01-01T00:00:00)
@@ -54,21 +54,23 @@ def run():
             except ValueError:
                 try:
                     # Try with space instead of T (2025-01-01 00:00:00)
-                    last_cycle = datetime.strptime(last_cycle, '%Y-%m-%d %H:%M:%S%z')
+                    last_cycle = datetime.strptime(last_cycle, "%Y-%m-%d %H:%M:%S%z")
                 except ValueError:
                     try:
                         # Try without timezone (2025-01-01 00:00:00)
-                        last_cycle = datetime.strptime(last_cycle, '%Y-%m-%d %H:%M:%S')
+                        last_cycle = datetime.strptime(last_cycle, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
                         # Fall back to original method as last resort
                         from nectar.utils import formatTimeString
+
                         last_cycle = formatTimeString(last_cycle)
-            
+
             # Ensure timezone info is added if needed
             if last_cycle.tzinfo is None:
                 last_cycle = addTzInfo(last_cycle)
         elif last_cycle.tzinfo is None:
             from nectar.utils import addTzInfo
+
             last_cycle = addTzInfo(last_cycle)
 
     share_cycle_min = conf_setup["share_cycle_min"]
@@ -79,9 +81,10 @@ def run():
     # Ensure last_delegation_check has timezone info
     if last_delegation_check is not None:
         if isinstance(last_delegation_check, str):
-            from nectar.utils import addTzInfo
             from datetime import datetime
-            
+
+            from nectar.utils import addTzInfo
+
             # Try to parse the datetime string directly instead of using formatTimeString
             try:
                 # Try ISO format first (2025-01-01T00:00:00)
@@ -89,16 +92,21 @@ def run():
             except ValueError:
                 try:
                     # Try with space instead of T (2025-01-01 00:00:00)
-                    last_delegation_check = datetime.strptime(last_delegation_check, '%Y-%m-%d %H:%M:%S%z')
+                    last_delegation_check = datetime.strptime(
+                        last_delegation_check, "%Y-%m-%d %H:%M:%S%z"
+                    )
                 except ValueError:
                     try:
                         # Try without timezone (2025-01-01 00:00:00)
-                        last_delegation_check = datetime.strptime(last_delegation_check, '%Y-%m-%d %H:%M:%S')
+                        last_delegation_check = datetime.strptime(
+                            last_delegation_check, "%Y-%m-%d %H:%M:%S"
+                        )
                     except ValueError:
                         # Fall back to original method as last resort
                         from nectar.utils import formatTimeString
+
                         last_delegation_check = formatTimeString(last_delegation_check)
-            
+
             # Ensure timezone info is added if needed
             if last_delegation_check.tzinfo is None:
                 last_delegation_check = addTzInfo(last_delegation_check)
@@ -109,7 +117,7 @@ def run():
 
     # Import formatTimeString here to ensure it's available for the print statement
     from nectar.utils import formatTimeString as format_time_string
-    
+
     print(
         "sbi_check_delegation: last_cycle: %s - %.2f min"
         % (

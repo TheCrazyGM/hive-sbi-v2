@@ -59,6 +59,7 @@ def run():
     # Add timezone information to last_cycle if it's offset-naive
     if last_cycle is not None and last_cycle.tzinfo is None:
         from nectar.utils import addTzInfo
+
         last_cycle = addTzInfo(last_cycle)
     share_cycle_min = conf_setup["share_cycle_min"]
 
