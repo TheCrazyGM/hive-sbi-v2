@@ -1,5 +1,4 @@
 import json
-import logging
 import time
 from datetime import datetime, timezone
 
@@ -9,10 +8,10 @@ from nectar.amount import Amount
 from nectar.nodelist import NodeList
 from nectar.utils import formatTimeString
 
+from hive_sbi.hsbi.core import get_logger
 from hive_sbi.hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = get_logger()
 
 
 def get_account_trx_data(account, start_block, start_index) -> list:
@@ -27,7 +26,7 @@ def get_account_trx_data(account, start_block, start_index) -> list:
         virtual_op = start_block["virtual_op"]
         start_block = start_block["block"]
 
-        logging.info(f"account {account['name']} - {start_block}")
+        logger.info(f"account {account['name']} - {start_block}")
     else:
         start_block = 0
         trx_in_block = 0
@@ -99,7 +98,7 @@ def get_account_trx_storage_data(account, start_index, hv) -> list:
     """
     if start_index is not None:
         start_index = start_index["op_acc_index"] + 1
-        logging.info(f"account {account['name']} - {start_index}")
+        logger.info(f"account {account['name']} - {start_index}")
 
     data = []
     for op in account.history(start=start_index, use_block_num=False, only_ops=["transfer"]):
@@ -173,10 +172,10 @@ def run():
     # Ensure last_cycle is always UTC-aware (defensive fix for legacy or bad DB data)
     if last_cycle is not None:
         if last_cycle.tzinfo is None:
-            logging.warning("last_cycle is not timezone-aware. Forcing UTC.")
+            logger.warning("last_cycle is not timezone-aware. Forcing UTC.")
             last_cycle = last_cycle.replace(tzinfo=timezone.utc)
         minutes_since_last_cycle = (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60
-        logging.info(
+        logger.info(
             f"sbi_store_ops_db: last_cycle: {formatTimeString(last_cycle)} - {minutes_since_last_cycle:.2f} min"
         )
 
@@ -189,9 +188,9 @@ def run():
         nodes.update_nodes()
         # nodes.update_nodes(weights={"hist": 1})
         hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
-        logging.info(str(hv))
+        logger.info(str(hv))
 
-        logging.info("Fetch new account history ops.")
+        logger.info("Fetch new account history ops.")
 
         # Blockchain instance is not needed here
 
@@ -234,7 +233,7 @@ def run():
             # Process data using the same approach as the original code
             # Batch insert transfer transaction storage data
             _batch_insert(transferTrxStorage.add_batch, data, batch_size=1000)
-        logging.info(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
+        logger.info(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

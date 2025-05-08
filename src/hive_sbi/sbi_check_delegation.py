@@ -4,7 +4,10 @@ from nectar import Hive
 from nectar.instance import set_shared_blockchain_instance
 from nectar.nodelist import NodeList
 
+from hive_sbi.hsbi.core import get_logger
 from hive_sbi.hsbi.transfer_ops_storage import TransferTrx
+
+logger = get_logger()
 
 
 def calculate_shares(delegation_shares, sp_share_ratio):
@@ -118,7 +121,7 @@ def run():
     # Import formatTimeString here to ensure it's available for the print statement
     from nectar.utils import formatTimeString as format_time_string
 
-    print(
+    logger.info(
         "sbi_check_delegation: last_cycle: %s - %.2f min"
         % (
             format_time_string(last_cycle),
@@ -134,7 +137,7 @@ def run():
         try:
             nodes.update_nodes()
         except Exception as e:
-            print(f"could not update nodes: {str(e)}")
+            logger.info(f"could not update nodes: {str(e)}")
         hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
         set_shared_blockchain_instance(hv)
 
@@ -157,7 +160,7 @@ def run():
         sum_sp_shares = 0
         delegation_timestamp = {}
 
-        print("load delegation")
+        logger.info("load delegation")
         delegation_list = []
         for d in trxStorage.get_share_type(share_type="Delegation"):
             if d["share_type"] == "Delegation":
@@ -191,7 +194,7 @@ def run():
 
         delegation_leased = {}
         delegation_shares = {}
-        print("update delegation")
+        logger.info("update delegation")
         delegation_account = delegation
         for acc in delegation_account:
             if delegation_account[acc] == 0:
@@ -210,7 +213,7 @@ def run():
                 last_delegation_check = delegation_timestamp[acc]
             # if acc in delegation_shares and delegation_shares[acc] > 0:
             #    continue
-            print(acc)
+            logger.info(acc)
             leased = transferStorage.find(acc, account)
             if len(leased) == 0:
                 delegation_shares[acc] = delegation_account[acc]
@@ -219,7 +222,7 @@ def run():
                 continue
             delegation_leased[acc] = delegation_account[acc]
             trxStorage.update_delegation_state(account, acc, "Delegation", "DelegationLeased")
-            print("set delegration from %s to leased" % acc)
+            logger.info("set delegration from %s to leased" % acc)
 
         dd = delegation
         for d in dd:
@@ -232,8 +235,8 @@ def run():
             sum_sp_shares += dd[d]
     confStorage.update({"last_cycle": datetime.now(timezone.utc)})
 
-    print(f"Last delegation check: {format_time_string(last_delegation_check)}")
-    print(f"Delegation check completed in {measure_execution_time(start_time):.2f} seconds")
+    logger.info(f"Last delegation check: {format_time_string(last_delegation_check)}")
+    logger.info(f"Delegation check completed in {measure_execution_time(start_time):.2f} seconds")
 
 
 if __name__ == "__main__":

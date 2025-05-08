@@ -1,7 +1,6 @@
 import json
 import random
 import time
-from datetime import datetime, timezone
 
 from nectar import Hive
 from nectar.blockchain import Blockchain
@@ -9,7 +8,14 @@ from nectar.comment import Comment
 from nectar.nodelist import NodeList
 from nectar.utils import construct_authorperm
 
-from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+from hive_sbi.hsbi.core import (
+    get_logger,
+    load_config,
+    setup_database_connections,
+    setup_storage_objects,
+)
+
+logger = get_logger()
 from hive_sbi.hsbi.member import Member
 from hive_sbi.hsbi.storage import MemberDB
 from hive_sbi.hsbi.transfer_ops_storage import PostsTrx
@@ -66,7 +72,7 @@ def run():
     comment_footer = conf_setup["comment_footer"]
 
     member_accounts = memberStorage.get_all_accounts()
-    print("%d members in list" % len(member_accounts))
+    logger.info("%d members in list" % len(member_accounts))
 
     nobroadcast = False
     # nobroadcast = True
@@ -77,7 +83,7 @@ def run():
 
     postTrx = PostsTrx(db)
 
-    print("stream new posts")
+    logger.info("stream new posts")
 
     max_batch_size = 50
     threading = False
@@ -91,7 +97,7 @@ def run():
     try:
         nodes.update_nodes()
     except Exception as e:
-        print(f"could not update nodes: {str(e)}")
+        logger.warning(f"could not update nodes: {str(e)}")
 
     keys = []
     account_list = []

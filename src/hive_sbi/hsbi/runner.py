@@ -1,7 +1,14 @@
 import sys
 import time
 
-from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+from hive_sbi.hsbi.core import (
+    get_logger,
+    load_config,
+    setup_database_connections,
+    setup_storage_objects,
+)
+
+logger = get_logger()
 from hive_sbi.hsbi.cycle import is_new_cycle
 from hive_sbi.hsbi.init_db import init_database
 from hive_sbi.hsbi.utils import measure_execution_time, print_elapsed_time
@@ -29,11 +36,12 @@ def run_module(module_name):
     storage = setup_storage_objects(db, db2)
 
     # Print elapsed time since last cycle
+    # NOTE: print_elapsed_time may still use print internally. Consider refactoring it to use logging if needed.
     print_elapsed_time(module_name, storage["conf_setup"]["last_cycle"])
 
     # Check if it's time for a new cycle
     if not is_new_cycle(storage["conf_setup"]):
-        print(f"{module_name}: Not time for a new cycle yet. Exiting.")
+        logger.info(f"{module_name}: Not time for a new cycle yet. Exiting.")
         return
 
     # Import and run the specific module
@@ -56,14 +64,14 @@ def run_module(module_name):
     elif module_name == "check_member_db":
         from hive_sbi.sbi_check_member_db import run
     else:
-        print(f"Unknown module: {module_name}")
+        logger.warning(f"Unknown module: {module_name}")
         return
 
     # Run the module
     run()
 
     # Print execution time
-    print(f"{module_name} script run {measure_execution_time(start_time):.2f} s")
+    logger.info(f"{module_name} script run {measure_execution_time(start_time):.2f} s")
 
 
 def run_all():
@@ -83,9 +91,9 @@ def run_all():
     ]
 
     for module in modules:
-        print(f"Running {module}...")
+        logger.info(f"Running {module}...")
         run_module(module)
-        print(f"Finished {module}\n")
+        logger.info(f"Finished {module}\n")
 
 
 def main():

@@ -1,6 +1,8 @@
 import time
 from datetime import datetime, timezone
 
+from hive_sbi.hsbi.core import get_logger
+
 
 def get_current_time():
     """
@@ -40,6 +42,9 @@ def get_elapsed_time_minutes(last_time):
     return (get_current_time() - last_time).total_seconds() / 60
 
 
+logger = get_logger()
+
+
 def print_elapsed_time(script_name, last_cycle):
     """
     Print elapsed time since last cycle
@@ -49,7 +54,7 @@ def print_elapsed_time(script_name, last_cycle):
         last_cycle (datetime): Last cycle time
     """
     elapsed_minutes = get_elapsed_time_minutes(last_cycle)
-    print(f"{script_name}: last_cycle: {last_cycle} - {elapsed_minutes:.2f} min")
+    logger.info(f"{script_name}: last_cycle: {last_cycle} - {elapsed_minutes:.2f} min")
 
 
 def measure_execution_time(start_time):

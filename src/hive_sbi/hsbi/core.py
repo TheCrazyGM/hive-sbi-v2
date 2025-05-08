@@ -1,7 +1,24 @@
 import json
+import logging
 import os
 
 import dataset
+
+
+def get_logger(name="hive_sbi.hsbi"):
+    """
+    Return a logger configured for the hive_sbi.hsbi namespace.
+    """
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
 
 
 def load_config(config_file="config.json"):
@@ -14,6 +31,7 @@ def load_config(config_file="config.json"):
     Returns:
         dict: Configuration data
     """
+    logger = get_logger()
     # Try multiple paths for the config file
     paths_to_try = [
         config_file,  # Current directory
@@ -35,7 +53,7 @@ def load_config(config_file="config.json"):
             f"Could not find {config_file} in any of the expected locations: {paths_to_try}"
         )
 
-    print(f"Loading configuration from {config_path}")
+    logger.info(f"Loading configuration from {config_path}")
     with open(config_path) as json_data_file:
         config_data = json.load(json_data_file)
 

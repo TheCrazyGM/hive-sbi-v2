@@ -9,10 +9,17 @@ from nectar.nodelist import NodeList
 from nectar.utils import addTzInfo, construct_authorperm, formatTimeString
 from nectar.vote import Vote
 
-from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
+from hive_sbi.hsbi.core import (
+    get_logger,
+    load_config,
+    setup_database_connections,
+    setup_storage_objects,
+)
 from hive_sbi.hsbi.member import Member
 from hive_sbi.hsbi.transfer_ops_storage import CurationOptimizationTrx, MemberHistDB
 from hive_sbi.hsbi.utils import measure_execution_time
+
+logger = get_logger()
 
 
 def run():
@@ -53,7 +60,7 @@ def run():
 
     # print("Count rshares of upvoted members.")
     member_accounts = memberStorage.get_all_accounts()
-    print("%d members in list" % len(member_accounts))
+    logger.info("%d members in list" % len(member_accounts))
 
     member_data = {}
     latest_enrollment = None
@@ -65,7 +72,7 @@ def run():
         elif latest_enrollment < member_data[m]["latest_enrollment"]:
             latest_enrollment = member_data[m]["latest_enrollment"]
 
-    print("latest member enrollment %s" % str(latest_enrollment))
+    logger.info("latest member enrollment %s" % str(latest_enrollment))
 
     updated_member_data = []
 
@@ -77,7 +84,7 @@ def run():
     try:
         nodes.update_nodes()
     except Exception as e:
-        print(f"could not update nodes: {str(e)}")
+        logger.warning(f"could not update nodes: {str(e)}")
 
     node_list = nodes.get_nodes(hive=hive_blockchain)
     hv = Hive(node=node_list, num_retries=3, timeout=10)
@@ -340,7 +347,6 @@ def run():
         curationOptimTrx.db = db
         curationOptimTrx.add_batch(curation_vote_list)
         curation_vote_list = []
-
 
     print(f"store_member_hist script run {measure_execution_time(start_prep_time):.2f} s")
 

@@ -7,8 +7,11 @@ from nectar.blockchain import Blockchain
 from nectar.comment import Comment
 from nectar.nodelist import NodeList
 
+from hive_sbi.hsbi.core import get_logger
 from hive_sbi.hsbi.member import Member
 from hive_sbi.hsbi.transfer_ops_storage import PostsTrx
+
+logger = get_logger()
 
 
 def run():
@@ -43,7 +46,7 @@ def run():
     try:
         nodes.update_nodes()
     except Exception as e:
-        print(f"could not update nodes: {str(e)}")
+        logger.warning(f"could not update nodes: {str(e)}")
     hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
 
     conf_setup = storage["conf_setup"]
@@ -66,10 +69,10 @@ def run():
     for m in member_accounts:
         upvote_counter[m] = 0
 
-    # print("%d members in list" % len(member_accounts))
+    logger.info("%d members in list" % len(member_accounts))
     postTrx = PostsTrx(db)
 
-    print("Upvote posts/comments")
+    logger.info("Upvote posts/comments")
     start_timestamp = datetime(2018, 12, 14, 9, 18, 20)
 
     if True:
