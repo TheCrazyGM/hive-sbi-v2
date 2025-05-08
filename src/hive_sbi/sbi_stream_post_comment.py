@@ -17,7 +17,7 @@ from hive_sbi.hsbi.version import version as sbiversion
 
 
 def run():
-    start_prep_time = measure_execution_time()
+    start_prep_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -29,21 +29,18 @@ def run():
     storage = setup_storage_objects(db, db2)
 
     # Get storage objects
-    trxStorage = storage["trx"]
-    memberStorage = storage["member"]
-    confStorage = storage["conf_setup"]
-    blacklistStorage = storage["blacklist"]
-    accStorage = storage["accounts"]
-    keyStorage = storage["keys"]
+    trxStorage = storage["trxStorage"]
+    memberStorage = storage["memberStorage"]
+    confStorage = storage["confStorage"]
+    keyStorage = storage["keyStorage"]
 
     # Get blockchain setting
     hive_blockchain = config_data.get("hive_blockchain", True)
-    hive_blockchain = config_data.get("hive_blockchain", True)
 
-    accounts = accStorage.get()
-    other_accounts = accStorage.get_transfer()
+    accounts = storage["accounts"]
+    other_accounts = storage["other_accounts"]
 
-    blacklist = blacklistStorage.get()
+    blacklist = storage["blacklist"]
 
     blacklist_tags = []
     for t in blacklist["tags"].split(","):
@@ -321,7 +318,7 @@ def run():
             if c.body.find(s) > -1:
                 skip = True
 
-        vote_delay = member_data[ops["author"]]["upvote_delay"]
+        vote_delay = member_data.get(ops["author"], {}).get("upvote_delay", 300)
         if vote_delay is None:
             vote_delay = 300
         posts_dict[authorperm] = {

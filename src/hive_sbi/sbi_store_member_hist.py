@@ -16,7 +16,7 @@ from hive_sbi.hsbi.utils import measure_execution_time
 
 
 def run():
-    start_prep_time = measure_execution_time()
+    start_prep_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -27,15 +27,14 @@ def run():
     # Setup storage objects
     storage = setup_storage_objects(db, db2)
 
-    # Get account storage
-    accountStorage = storage["accounts"]
-    accounts = accountStorage.get()
-    other_accounts = accountStorage.get_transfer()
+    # Get accounts and other_accounts lists directly from storage
+    accounts = storage["accounts"]
+    other_accounts = storage["other_accounts"]
 
     # Get storage objects
-    trxStorage = storage["trx"]
-    memberStorage = storage["member"]
-    confStorage = storage["conf_setup"]
+    trxStorage = storage["trxStorage"]
+    memberStorage = storage["memberStorage"]
+    confStorage = storage["confStorage"]
 
     # Get blockchain setting
     hive_blockchain = config_data.get("hive_blockchain", True)
@@ -110,7 +109,7 @@ def run():
 
     print("Checking member upvotes from %d to %d" % (start_block, end_block))
 
-    date_now = datetime.now(timezone.utc)()
+    date_now = datetime.now(timezone.utc)
     date_7_before = addTzInfo(date_now - timedelta(seconds=7 * 24 * 60 * 60))
     date_28_before = addTzInfo(date_now - timedelta(seconds=28 * 24 * 60 * 60))
     date_72h_before = addTzInfo(date_now - timedelta(seconds=72 * 60 * 60))
@@ -175,11 +174,12 @@ def run():
             else:
                 member_data[op["author"]]["last_comment"] = c["created"]
 
-            if member_data[op["author"]]["last_post"] is None:
+            author_info = member_data.get(op["author"], {})
+            if author_info.get("last_post") is None:
                 member_data[op["author"]]["comment_upvote"] = 1
-            elif addTzInfo(member_data[op["author"]]["last_post"]) < date_7_before:
+            elif addTzInfo(author_info.get("last_post", None)) < date_7_before:
                 member_data[op["author"]]["comment_upvote"] = 1
-            elif member_data[op["author"]]["comment_upvote"] == 1:
+            elif author_info.get("comment_upvote", None) == 1:
                 member_data[op["author"]]["comment_upvote"] = 0
             member_data[op["author"]]["updated_at"] = c["created"]
             updated_member_data.append(member_data[op["author"]])

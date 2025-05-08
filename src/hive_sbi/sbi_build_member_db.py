@@ -1,21 +1,22 @@
 import json
+import time
 
 from nectar import Hive
 from nectar.nodelist import NodeList
 from nectar.utils import formatTimeString
 
-from hive_sbi.hsbi.member import Member
-from hive_sbi.hsbi.utils import (
+from hive_sbi.hsbi.core import (
     load_config,
-    measure_execution_time,
     setup_database_connections,
     setup_storage_objects,
 )
+from hive_sbi.hsbi.member import Member
+from hive_sbi.hsbi.utils import measure_execution_time
 
 
 def run():
     """Run the build member database module"""
-    start_time = measure_execution_time()
+    start_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -27,8 +28,8 @@ def run():
     storage = setup_storage_objects(db, db2)
 
     # Get storage objects
-    trxStorage = storage["trx"]
-    memberStorage = storage["members"]
+    trxStorage = storage["trxStorage"]
+    memberStorage = storage["memberStorage"]
 
     # Get configuration values
     hive_blockchain = config_data.get("hive_blockchain", True)

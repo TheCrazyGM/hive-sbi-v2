@@ -1,3 +1,5 @@
+import time
+
 from nectar import Hive
 from nectar.nodelist import NodeList
 
@@ -7,7 +9,7 @@ from hive_sbi.hsbi.utils import measure_execution_time
 
 def run():
     """Run the check member database module"""
-    start_time = measure_execution_time()
+    start_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -19,10 +21,10 @@ def run():
     storage = setup_storage_objects(db, db2)
 
     # Get storage objects
-    trxStorage = storage["trx"]
-    memberStorage = storage["member"]
-    confStorage = storage["conf_setup"]
-    accStorage = storage["accounts"]
+    trxStorage = storage["trxStorage"]
+    memberStorage = storage["memberStorage"]
+    confStorage = storage["confStorage"]
+    accStorage = storage["accountStorage"]
 
     # Get configuration values
     accounts = accStorage.get()
@@ -88,7 +90,7 @@ def run():
     print("total units: %d" % (shares + bonus_shares))
     print("----------")
     print("balance_rshares: %d" % balance_rshares)
-    print("balance_rshares: %.3f $" % hv.rshares_to_sbd(balance_rshares))
+    print("balance_rshares: %.3f $" % hv.rshares_to_hbd(balance_rshares))
     if len(missing_accounts) > 0:
         print("%d not existing accounts: " % len(missing_accounts))
         print(missing_accounts)

@@ -15,7 +15,7 @@ def run():
     from hive_sbi.hsbi.core import load_config, setup_database_connections, setup_storage_objects
     from hive_sbi.hsbi.utils import measure_execution_time
 
-    start_prep_time = measure_execution_time()
+    start_prep_time = time.time()
 
     # Load configuration
     config_data = load_config()
@@ -27,18 +27,18 @@ def run():
     storage = setup_storage_objects(db, db2)
 
     # Get storage objects
-    trxStorage = storage["trx"]
-    memberStorage = storage["member"]
-    confStorage = storage["conf_setup"]
-    accStorage = storage["accounts"]
-    keyStorage = storage["keys"]
+    trxStorage = storage["trxStorage"]
+    memberStorage = storage["memberStorage"]
+    confStorage = storage["confStorage"]
+    accStorage = storage["accountStorage"]
+    keyStorage = storage["keyStorage"]
 
     # Get blockchain setting
     hive_blockchain = config_data.get("hive_blockchain", True)
 
-    accounts = accStorage.get()
+    accounts = storage["accounts"]
 
-    conf_setup = confStorage.get()
+    conf_setup = storage["conf_setup"]
 
     last_cycle = conf_setup["last_cycle"]
     share_cycle_min = conf_setup["share_cycle_min"]

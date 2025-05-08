@@ -80,6 +80,7 @@ def setup_storage_objects(db, db2):
         TransactionMemoDB,
         TransferMemoDB,
         TrxDB,
+        BlacklistDB,
     )
 
     storage = {}
@@ -92,6 +93,7 @@ def setup_storage_objects(db, db2):
     storage["trxStorage"] = TrxDB(db2)
     storage["transactionStorage"] = TransactionMemoDB(db2)
     storage["transferMemosStorage"] = TransferMemoDB(db2)
+    storage["blacklistStorage"] = BlacklistDB(db2)
 
     # Get accounts
     storage["accounts"] = storage["accountStorage"].get()
@@ -99,6 +101,9 @@ def setup_storage_objects(db, db2):
 
     # Get configuration
     storage["conf_setup"] = storage["confStorage"].get()
+
+    # Get blacklist data
+    storage["blacklist"] = storage["blacklistStorage"].get()
 
     return storage
 
