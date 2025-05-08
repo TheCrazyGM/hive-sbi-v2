@@ -395,7 +395,7 @@ class PostsTrx:
         del_posts = []
         for post in table.find(order_by="created"):
             if (
-                datetime.now(timezone.utc)() - post["created"]
+                datetime.now(timezone.utc) - post["created"]
             ).total_seconds() > 60 * 60 * 24 * days:
                 del_posts.append({"author": post["author"], "created": post["created"]})
         for post in del_posts:
@@ -562,7 +562,7 @@ class CurationOptimizationTrx:
         del_posts = []
         for post in table.find(order_by="created"):
             if (
-                datetime.now(timezone.utc)() - post["created"]
+                datetime.now(timezone.utc) - post["created"]
             ).total_seconds() > 60 * 60 * 24 * days:
                 del_posts.append({"member": post["member"], "created": post["created"]})
         for post in del_posts:

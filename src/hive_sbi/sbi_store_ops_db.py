@@ -12,7 +12,7 @@ from nectar.utils import formatTimeString
 from hive_sbi.hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def get_account_trx_data(account, start_block, start_index) -> list:
@@ -176,7 +176,9 @@ def run():
             logging.warning("last_cycle is not timezone-aware. Forcing UTC.")
             last_cycle = last_cycle.replace(tzinfo=timezone.utc)
         minutes_since_last_cycle = (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60
-        logging.info(f"sbi_store_ops_db: last_cycle: {formatTimeString(last_cycle)} - {minutes_since_last_cycle:.2f} min")
+        logging.info(
+            f"sbi_store_ops_db: last_cycle: {formatTimeString(last_cycle)} - {minutes_since_last_cycle:.2f} min"
+        )
 
     if (
         last_cycle is not None

@@ -4,7 +4,7 @@ import dataset
 from dateutil.parser import parse
 
 from hive_sbi.hsbi.core import load_config
-from hive_sbi.hsbi.storage import AccountsDB, KeysDB, BlacklistDB
+from hive_sbi.hsbi.storage import AccountsDB, BlacklistDB, KeysDB
 
 
 def init_database(config_file="config.json"):
@@ -111,11 +111,7 @@ def init_database(config_file="config.json"):
         print("Blacklist table initialized.")
     # Insert default blacklist record if not present
     if blacklistDB.get() is None:
-        blacklistDB.set({
-            "tags": "",
-            "apps": "",
-            "body": ""
-        })
+        blacklistDB.set({"tags": "", "apps": "", "body": ""})
         print("Default blacklist record created.")
     else:
         print("Blacklist record already exists.")

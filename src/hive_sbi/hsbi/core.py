@@ -74,13 +74,13 @@ def setup_storage_objects(db, db2):
     """
     from hive_sbi.hsbi.storage import (
         AccountsDB,
+        BlacklistDB,
         ConfigurationDB,
         KeysDB,
         MemberDB,
         TransactionMemoDB,
         TransferMemoDB,
         TrxDB,
-        BlacklistDB,
     )
 
     storage = {}
