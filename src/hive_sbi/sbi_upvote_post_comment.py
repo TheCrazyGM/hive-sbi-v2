@@ -38,6 +38,14 @@ def run():
 
     accounts = storage["accounts"]
 
+    # Setup Hive connection (fix for undefined 'hv')
+    nodes = NodeList()
+    try:
+        nodes.update_nodes()
+    except Exception as e:
+        print(f"could not update nodes: {str(e)}")
+    hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
+
     conf_setup = storage["conf_setup"]
 
     last_cycle = conf_setup["last_cycle"]
@@ -85,31 +93,6 @@ def run():
         https = True
         normal = True
         appbase = True
-
-    nodes = NodeList()
-    # nodes.update_nodes(weights={"block": 1})
-    try:
-        nodes.update_nodes()
-    except Exception as e:
-        print(f"could not update nodes: {e}")
-
-    keys = []
-    for acc in accounts:
-        keys.append(keyStorage.get(acc, "posting"))
-    keys_list = []
-    for k in keys:
-        if k["key_type"] == "posting":
-            keys_list.append(k["wif"].replace("\n", "").replace("\r", ""))
-    node_list = nodes.get_nodes(hive=hive_blockchain)
-
-    hv = Hive(
-        node=node_list,
-        keys=keys_list,
-        num_retries=5,
-        call_num_retries=3,
-        timeout=15,
-        nobroadcast=nobroadcast,
-    )
 
     voter_accounts = {}
     for acc in accounts:
@@ -412,7 +395,8 @@ def run():
                     postTrx.update_voted(author, created, vote_sucessfull, voted_after)
 
             print("rshares_sum %d" % rshares_sum)
-    print(f"upvote script run {measure_execution_time(start_prep_time):.2f} s")
+    confStorage.update({"last_cycle": datetime.now(timezone.utc)})
+    print(f"upvote_post_comment script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

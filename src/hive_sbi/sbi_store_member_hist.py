@@ -341,7 +341,8 @@ def run():
         curationOptimTrx.add_batch(curation_vote_list)
         curation_vote_list = []
 
-    print(f"member hist script run {measure_execution_time(start_prep_time):.2f} s")
+
+    print(f"store_member_hist script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":

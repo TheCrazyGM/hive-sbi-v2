@@ -1,6 +1,7 @@
 import json
 import random
 import time
+from datetime import datetime, timezone
 
 from nectar import Hive
 from nectar.blockchain import Blockchain
@@ -78,27 +79,12 @@ def run():
 
     print("stream new posts")
 
-    if True:
-        max_batch_size = 50
-        threading = False
-        wss = False
-        https = True
-        normal = False
-        appbase = True
-    elif False:
-        max_batch_size = None
-        threading = True
-        wss = True
-        https = False
-        normal = True
-        appbase = True
-    else:
-        max_batch_size = None
-        threading = False
-        wss = True
-        https = True
-        normal = True
-        appbase = True
+    max_batch_size = 50
+    threading = False
+    wss = False
+    https = True
+    normal = False
+    appbase = True
 
     nodes = NodeList()
     # nodes.update_nodes(weights={"block": 1})

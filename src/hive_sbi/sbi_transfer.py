@@ -70,11 +70,14 @@ def run():
             (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60,
         )
     )
+    confStorage = storage.get("confStorage")
 
     if (
         last_cycle is not None
         and (datetime.now(timezone.utc) - last_cycle).total_seconds() > 60 * share_cycle_min
     ):
+        # ... main processing logic ...
+        confStorage.update({"last_cycle": datetime.now(timezone.utc)})
         key_list = []
         print("Parse new transfers.")
         key = keyStorage.get("steembasicincome", "memo")

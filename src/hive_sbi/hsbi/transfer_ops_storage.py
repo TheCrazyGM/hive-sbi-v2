@@ -394,9 +394,10 @@ class PostsTrx:
         table = self.db[self.__tablename__]
         del_posts = []
         for post in table.find(order_by="created"):
-            if (
-                datetime.now(timezone.utc) - post["created"]
-            ).total_seconds() > 60 * 60 * 24 * days:
+            created = post["created"]
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - created).total_seconds() > 60 * 60 * 24 * days:
                 del_posts.append({"author": post["author"], "created": post["created"]})
         for post in del_posts:
             table.delete(author=post["author"], created=post["created"])
@@ -561,9 +562,10 @@ class CurationOptimizationTrx:
         table = self.db[self.__tablename__]
         del_posts = []
         for post in table.find(order_by="created"):
-            if (
-                datetime.now(timezone.utc) - post["created"]
-            ).total_seconds() > 60 * 60 * 24 * days:
+            created = post["created"]
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - created).total_seconds() > 60 * 60 * 24 * days:
                 del_posts.append({"member": post["member"], "created": post["created"]})
         for post in del_posts:
             table.delete(member=post["member"], created=post["created"])

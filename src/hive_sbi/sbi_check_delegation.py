@@ -230,14 +230,10 @@ def run():
         dd = delegation_shares
         for d in dd:
             sum_sp_shares += dd[d]
-        print(
-            "%s: sum %.6f SP - shares %.6f SP - leased %.6f SP"
-            % (account, sum_sp, sum_sp_shares, sum_sp_leased)
-        )
+    confStorage.update({"last_cycle": datetime.now(timezone.utc)})
 
-        confStorage.update({"last_delegation_check": last_delegation_check})
-
-        print(f"Delegation check completed in {measure_execution_time(start_time):.2f} seconds")
+    print(f"Last delegation check: {format_time_string(last_delegation_check)}")
+    print(f"Delegation check completed in {measure_execution_time(start_time):.2f} seconds")
 
 
 if __name__ == "__main__":
