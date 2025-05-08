@@ -1,0 +1,26 @@
+{
+  "databaseConnector": "sqlite:///data/sbi.db",
+  "databaseConnector2": "sqlite:///data/sbi2.db",
+  "hive_blockchain": true,
+  "accounts": ["hivesbincome", "hivesbi1", "hivesbi2", "hivesbi3"],
+  "other_accounts": ["minnowbooster", "dlease"],
+  "path": "",
+  "mgnt_shares": {
+    "josephsavage": 4,
+    "samuel-swinton": 1
+  },
+  "share_cycle_min": 144,
+  "sp_share_ratio": 2,
+  "rshares_per_cycle": 50000000,
+  "del_rshares_per_cycle": 50000000,
+  "minimum_vote_threshold": 67249508374,
+  "comment_vote_divider": 3,
+  "comment_vote_timeout_h": 3,
+  "last_cycle": "2025-01-01T00:00:00",
+  "last_paid_post": "2025-01-01T00:00:00",
+  "last_paid_comment": "2025-01-01T00:00:00",
+  "last_delegation_check": "2025-01-01T00:00:00",
+  "upvote_multiplier": 0,
+  "upvote_multiplier_adjusted": 0,
+  "comment_footer": "<br>Have you seen our [website](https://hivesbi.com)?<br>It's a great resource to check your Hive SBI Levels, along with your history of who has sponsored you and what upvotes we have provided you!"
+}
