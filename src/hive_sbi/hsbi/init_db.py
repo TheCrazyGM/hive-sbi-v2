@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dataset
 from dateutil.parser import parse
@@ -31,27 +31,36 @@ def init_database(config_file="config.json"):
         print("Initializing configuration table...")
         # Create configuration record
         # Convert ISO format strings to datetime objects
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
-        # Helper function to convert string dates to datetime objects
+        # Helper function to convert string dates to UTC-aware datetime objects
         def parse_date(date_str):
+            dt = None
             if isinstance(date_str, str):
-                return parse(date_str)
-            return date_str or now
+                dt = parse(date_str)
+            elif date_str is not None:
+                dt = date_str
+            else:
+                dt = now
+            # Ensure UTC timezone
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
 
         conf_data = {
             "id": 1,
             "last_cycle": parse_date(config_data.get("last_cycle", now)),
             "last_paid_post": parse_date(config_data.get("last_paid_post", now)),
             "last_paid_comment": parse_date(config_data.get("last_paid_comment", now)),
-            "share_cycle_min": config_data.get("share_cycle_min", 144000),
+            "share_cycle_min": config_data.get("share_cycle_min", 144),
             "sp_share_ratio": config_data.get("sp_share_ratio", 2),
-            "rshares_per_cycle": config_data.get("rshares_per_cycle", 800000000),
-            "minimum_vote_threshold": config_data.get("minimum_vote_threshold", 300000000),
-            "comment_vote_divider": config_data.get("comment_vote_divider", 2),
-            "comment_vote_timeout_h": config_data.get("comment_vote_timeout_h", 24),
-            "upvote_multiplier": config_data.get("upvote_multiplier", 1.05),
-            "upvote_multiplier_adjusted": config_data.get("upvote_multiplier_adjusted", 1.05),
+            "rshares_per_cycle": config_data.get("rshares_per_cycle", 50000000),
+            "del_rshares_per_cycle": config_data.get("del_rshares_per_cycle", 50000000),
+            "minimum_vote_threshold": config_data.get("minimum_vote_threshold", 67249508374),
+            "comment_vote_divider": config_data.get("comment_vote_divider", 3),
+            "comment_vote_timeout_h": config_data.get("comment_vote_timeout_h", 3),
+            "upvote_multiplier": config_data.get("upvote_multiplier", 0),
+            "upvote_multiplier_adjusted": config_data.get("upvote_multiplier_adjusted", 0),
             "last_delegation_check": now,
         }
         conf_table.insert(conf_data)

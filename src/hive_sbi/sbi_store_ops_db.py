@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -10,8 +11,15 @@ from nectar.utils import formatTimeString
 
 from hive_sbi.hsbi.transfer_ops_storage import AccountTrx, TransferTrx
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
-def get_account_trx_data(account, start_block, start_index):
+
+def get_account_trx_data(account, start_block, start_index) -> list:
+    """
+    Retrieve all transfer operations for a given account from a starting block and index.
+    Returns a list of transaction dictionaries.
+    """
     # Go through all transfer ops
     if start_block is not None:
         trx_in_block = start_block["trx_in_block"]
@@ -19,7 +27,7 @@ def get_account_trx_data(account, start_block, start_index):
         virtual_op = start_block["virtual_op"]
         start_block = start_block["block"]
 
-        print("account %s - %d" % (account["name"], start_block))
+        logging.info(f"account {account['name']} - {start_block}")
     else:
         start_block = 0
         trx_in_block = 0
@@ -84,10 +92,14 @@ def get_account_trx_data(account, start_block, start_index):
     return data
 
 
-def get_account_trx_storage_data(account, start_index, hv):
+def get_account_trx_storage_data(account, start_index, hv) -> list:
+    """
+    Retrieve all 'transfer' operations for an account from a starting index.
+    Returns a list of transaction storage dictionaries.
+    """
     if start_index is not None:
         start_index = start_index["op_acc_index"] + 1
-        print("account %s - %d" % (account["name"], start_index))
+        logging.info(f"account {account['name']} - {start_index}")
 
     data = []
     for op in account.history(start=start_index, use_block_num=False, only_ops=["transfer"]):
@@ -114,6 +126,20 @@ def get_account_trx_storage_data(account, start_index, hv):
         }
         data.append(d)
     return data
+
+
+def _batch_insert(add_batch_func, data: list, batch_size: int = 1000) -> None:
+    """
+    Helper to batch-insert data using the provided add_batch_func.
+    """
+    data_batch = []
+    for cnt, item in enumerate(data, 1):
+        data_batch.append(item)
+        if cnt % batch_size == 0:
+            add_batch_func(data_batch)
+            data_batch = []
+    if data_batch:
+        add_batch_func(data_batch)
 
 
 def run():
@@ -144,17 +170,13 @@ def run():
     last_cycle = conf_setup["last_cycle"]
     share_cycle_min = conf_setup["share_cycle_min"]
 
-    # Ensure last_cycle has timezone information
-    if last_cycle is not None and last_cycle.tzinfo is None:
-        last_cycle = last_cycle.replace(tzinfo=timezone.utc)
-
-    print(
-        "sbi_store_ops_db: last_cycle: %s - %.2f min"
-        % (
-            formatTimeString(last_cycle),
-            (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60,
-        )
-    )
+    # Ensure last_cycle is always UTC-aware (defensive fix for legacy or bad DB data)
+    if last_cycle is not None:
+        if last_cycle.tzinfo is None:
+            logging.warning("last_cycle is not timezone-aware. Forcing UTC.")
+            last_cycle = last_cycle.replace(tzinfo=timezone.utc)
+        minutes_since_last_cycle = (datetime.now(timezone.utc) - last_cycle).total_seconds() / 60
+        logging.info(f"sbi_store_ops_db: last_cycle: {formatTimeString(last_cycle)} - {minutes_since_last_cycle:.2f} min")
 
     if (
         last_cycle is not None
@@ -165,9 +187,9 @@ def run():
         nodes.update_nodes()
         # nodes.update_nodes(weights={"hist": 1})
         hv = Hive(node=nodes.get_nodes(hive=hive_blockchain))
-        print(str(hv))
+        logging.info(str(hv))
 
-        print("Fetch new account history ops.")
+        logging.info("Fetch new account history ops.")
 
         # Blockchain instance is not needed here
 
@@ -195,15 +217,8 @@ def run():
             data = get_account_trx_data(account, start_block, start_index)
 
             # Process data using the same approach as the original code
-            data_batch = []
-            for cnt in range(0, len(data)):
-                data_batch.append(data[cnt])
-                if cnt % 1000 == 0 and cnt > 0:
-                    accountTrx[account_name].add_batch(data_batch)
-                    data_batch = []
-            if len(data_batch) > 0:
-                accountTrx[account_name].add_batch(data_batch)
-                data_batch = []
+            # Batch insert account transaction data
+            _batch_insert(accountTrx[account_name].add_batch, data, batch_size=1000)
 
         # Process other accounts using a new TransferTrx instance
         transferTrxStorage = TransferTrx(db)
@@ -215,16 +230,9 @@ def run():
             data = get_account_trx_storage_data(account, start_index, hv)
 
             # Process data using the same approach as the original code
-            data_batch = []
-            for cnt in range(0, len(data)):
-                data_batch.append(data[cnt])
-                if cnt % 1000 == 0 and cnt > 0:
-                    transferTrxStorage.add_batch(data_batch)
-                    data_batch = []
-            if len(data_batch) > 0:
-                transferTrxStorage.add_batch(data_batch)
-                data_batch = []
-        print(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
+            # Batch insert transfer transaction storage data
+            _batch_insert(transferTrxStorage.add_batch, data, batch_size=1000)
+        logging.info(f"store_ops_db script run {measure_execution_time(start_prep_time):.2f} s")
 
 
 if __name__ == "__main__":
